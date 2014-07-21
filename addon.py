@@ -13,7 +13,8 @@ sys.path.append (__resource__)
 HOST='http://tv.api.3g.youku.com/'
 IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39cab341ead7b2aa90f9caf&ver=2.3.0'
 Navigation=['首页', '频道', '排行']
-ContentID=[520, 560, 600]
+ContentID=[520, 560, 580]
+ChannelData=[{'cid':'97', 'icon': 'channel_narmal_icon.png', 'title': '电视剧'}]
 
 
 ACTION_MOVE_LEFT      = 1
@@ -189,7 +190,7 @@ class HomeWindow(BaseWindow):
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['image'])
             listitem.setProperty('top_id', item['top_id'])
             listitem.setProperty('mtype', item['mtype'])
-            self.getControl(600).addItem(listitem)
+            self.getControl(580).addItem(listitem)
         
 
     def onClick( self, controlId ):
@@ -199,6 +200,8 @@ class HomeWindow(BaseWindow):
             item = self.getControl(controlId).getSelectedItem()
             if item.getProperty('mtype') == 'show':
                 play(item.getProperty('videoid'))
+            elif item.getProperty('mtype') == 'channel':
+                openWindow('channel', self.session)
             else:
                 xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
@@ -224,6 +227,24 @@ class HomeWindow(BaseWindow):
                 self.getControl(510).getSelectedItem().select(True)
 
 
+class ChannelWindow(BaseWindow):
+    def __init__( self, *args, **kwargs):
+        self.inited = False
+        BaseWindow.__init__(self, args, kwargs)
+
+    def onInit(self):
+        self.initOnce()
+        BaseWindow.onInit(self)
+
+    def initOnce(self):
+        if self.inited:
+            return
+
+        channel=ChannelData['cid':'97']
+        self.getControl(601).setImage(channel['icon'])
+        self.getControl(602).setText(channel['title'])
+        self.inited = True
+            
 
 class VstSession:
     def __init__(self,window=None):
@@ -299,10 +320,10 @@ def play(vid):
 
 def openWindow(window_name,session=None,**kwargs):
     windowFile = '%s.xml' % window_name
-    if window_name == 'main':
-        w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",**kwargs)
-    elif window_name == 'home':
+    if window_name == 'home':
         w = HomeWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+    elif window_name == 'channel':
+        w = ChannelWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     else:
         return 
     w.doModal()            
