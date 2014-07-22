@@ -49,6 +49,7 @@ ACTION_CONTEXT_MENU   = 117
 
 class BaseWindow(xbmcgui.WindowXML):
     def __init__( self, *args, **kwargs):
+        print ('Create BaseWindow')
         self.session = None
         self.oldWindow = None
         xbmcgui.WindowXML.__init__( self )
@@ -136,42 +137,32 @@ class HomeWindow(BaseWindow):
             return
         for item in data['results']['m1']:
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['image'])
-            listitem.setProperty('mtype', item['mtype'])
+            setProperties(listitem, item)
             self.getControl(521).addItem(listitem)
             
         for item in data['results']['m2']:
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['big_vertical_image'])
-            listitem.setProperty('showid', item['showid'])
-            listitem.setProperty('videoid', item['videoid'])
-            listitem.setProperty('mtype', item['mtype'])
+            setProperties(listitem, item)
             self.getControl(522).addItem(listitem)
             
         item = data['results']['m3'][0]
         listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['big_horizontal_image'])
-        listitem.setProperty('showid', item['showid'])
-        listitem.setProperty('videoid', item['videoid'])
-        listitem.setProperty('mtype', item['mtype'])
+        setProperties(listitem, item)
         self.getControl(524).addItem(listitem)        
             
         for item in data['results']['m3'][1:]:
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['big_vertical_image'])
-            listitem.setProperty('showid', item['showid'])
-            listitem.setProperty('videoid', item['videoid'])
-            listitem.setProperty('mtype', item['mtype'])
+            setProperties(listitem, item)
             self.getControl(525).addItem(listitem)
             
         item = data['results']['m4'][0]
         listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['big_horizontal_image'])
-        listitem.setProperty('showid', item['showid'])
-        listitem.setProperty('videoid', item['videoid'])
-        listitem.setProperty('mtype', item['mtype'])
+        setProperties(listitem, item)
         self.getControl(527).addItem(listitem)        
             
         for item in data['results']['m4'][1:]:
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['big_vertical_image'])
-            listitem.setProperty('showid', item['showid'])
-            listitem.setProperty('videoid', item['videoid'])
-            listitem.setProperty('mtype', item['mtype'])
+            setProperties(listitem, item)
             self.getControl(528).addItem(listitem)
 
         self.homeInited = True
@@ -192,22 +183,19 @@ class HomeWindow(BaseWindow):
         for i in range(0, len(data['results']['channel']), 2):
             item = data['results']['channel'][i]
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['image'])
-            listitem.setProperty('cid', item['cid'])
-            listitem.setProperty('mtype', item['mtype'])
+            setProperties(listitem, item)
             self.getControl(560).addItem(listitem)
 
         for i in range(1, len(data['results']['channel']), 2):
             item = data['results']['channel'][i]
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['image'])
-            listitem.setProperty('cid', item['cid'])
-            listitem.setProperty('mtype', item['mtype'])
+            setProperties(listitem, item)
             self.getControl(560).addItem(listitem)
 
         #Top
         for item in data['results']['top']:
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['image'])
-            listitem.setProperty('top_id', item['top_id'])
-            listitem.setProperty('mtype', item['mtype'])
+            setProperties(listitem, item)
             self.getControl(580).addItem(listitem)
 
         self.channelInited = True
@@ -228,7 +216,8 @@ class HomeWindow(BaseWindow):
 
     def onAction(self, action):
         BaseWindow.onAction(self, action)
-        if action.getId() == ACTION_MOVE_LEFT or action.getId() == ACTION_MOVE_RIGHT or action.getId() == ACTION_MOUSE_MOVE:
+        #if action.getId() == ACTION_MOVE_LEFT or action.getId() == ACTION_MOVE_RIGHT or action.getId() == ACTION_MOUSE_MOVE:
+        if action.getId() == ACTION_MOVE_LEFT or action.getId() == ACTION_MOVE_RIGHT:
             self.updateNavigation()
 
 
@@ -249,13 +238,18 @@ class HomeWindow(BaseWindow):
 
 class ChannelWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
+        print ('Create ChannelWindow done')
         self.subInited = False
+        self.conInited = False
+        self.urlArgs = {'pz':'100', 'pg':'1', 'filter':''}
         self.sdata = kwargs.get('sdata')
         BaseWindow.__init__(self, args, kwargs)
 
     def onInit(self):
+        print ('Init ChannelWindow done')
         BaseWindow.onInit(self)
         self.initSubChannel()
+        self.initContent()
 
     def initSubChannel(self):
         if self.subInited:
@@ -274,15 +268,71 @@ class ChannelWindow(BaseWindow):
         if data['status'] != 'success':
             return
 
+
+        #Add hot except child channel
+        listitem = xbmcgui.ListItem(label='热播')
+        self.getControl(610).addItem(listitem)
+
         for item in data['results']['result']:
             listitem = xbmcgui.ListItem(label=item['sub_channel_title'])
-            listitem.setProperty('filter', item['filter'])
-            listitem.setProperty('type', str(item['type']))
-            listitem.setProperty('filter_id', str(item['filter_id']))
+            setProperties(listitem, item)
             self.getControl(610).addItem(listitem)
 
+        self.selectedNavigation = 0
+        self.getControl(610).getListItem(0).select(True)
+        self.setFocusId(610)
+
         self.subInited = True
+
+
+    def initContent(self):
+        if self.conInited:
+            return
+
+        self.getControl(620).reset()
+        self.updateContent()
             
+        self.conInited = True
+
+
+    def updateContent(self):
+        url = HOST + 'layout/smarttv/item_list?' + IDS + '&cid=' + self.sdata
+        for k in self.urlArgs:
+            url = url + '&' + k + '=' + urllib.quote_plus(self.urlArgs[k])
+
+        data = GetHttpData(url)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return
+
+        for item in data['results']:
+            listitem = xbmcgui.ListItem(label=item['showname'], label2=item['stripe_bottom'], thumbnailImage=item['show_vthumburl_hd'])
+            setProperties(listitem, item)
+            self.getControl(620).addItem(listitem)
+
+
+    def updateSelection(self):
+        if self.getFocusId() == 610:
+            if self.selectedNavigation != self.getControl(610).getSelectedPosition():
+                #Disable old selection
+                self.getControl(610).getListItem(self.selectedNavigation).select(False)
+                #Enable new selection
+                self.selectedNavigation = self.getControl(610).getSelectedPosition()
+                self.getControl(610).getSelectedItem().select(True)
+        
+
+    def onClick( self, controlId ):
+        if controlId == 610:
+            self.urlArgs['filter'] = getProperty(self.getControl(610).getSelectedItem(), 'filter')
+
+            self.updateSelection()
+
+            self.conInited = False
+            self.initContent()
+            self.setFocusId(620)
+
 
 class VstSession:
     def __init__(self,window=None):
@@ -311,6 +361,23 @@ class VstSession:
         elif isinstance(default,bool):
             return setting == 'true'
         return setting
+
+
+def setProperties(listitem, item):
+    for k in item:
+        try:
+            listitem.setProperty(k, str(item[k]).encode('utf-8'))
+        except:
+            pass
+
+
+def getProperty(item, key):
+    try:
+        value = item.getProperty(key)
+    except:
+        value = ''
+
+    return value
 
 
 def play(vid):

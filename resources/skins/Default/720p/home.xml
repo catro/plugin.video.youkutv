@@ -279,7 +279,7 @@
                                 <posy>0</posy>
                                 <width>328</width>
                                 <height>188</height>        
-                                <texture>board-medium1.png</texture>
+                                <texture>border-medium1.png</texture>
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                         </focusedlayout>
@@ -343,7 +343,7 @@
                                 <posy>0</posy>
                                 <width>166</width>
                                 <height>258</height>        
-                                <texture>board-medium2.png</texture>
+                                <texture>border-medium2.png</texture>
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                         </focusedlayout>
@@ -414,7 +414,7 @@
                                 <posy>0</posy>
                                 <width>328</width>
                                 <height>188</height>        
-                                <texture>board-medium1.png</texture>
+                                <texture>border-medium1.png</texture>
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                         </focusedlayout>
@@ -478,7 +478,7 @@
                                 <posy>0</posy>
                                 <width>166</width>
                                 <height>258</height>        
-                                <texture>board-medium2.png</texture>
+                                <texture>border-medium2.png</texture>
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                         </focusedlayout>
@@ -542,7 +542,7 @@
                         <posy>0</posy>
                         <width>222</width>
                         <height>222</height>        
-                        <texture>board-channel.png</texture>
+                        <texture>border-channel.png</texture>
                         <aspectratio>stretch</aspectratio>
                     </control>    
                 </focusedlayout>
@@ -603,7 +603,7 @@
                         <posy>0</posy>
                         <width>348</width>
                         <height>468</height>        
-                        <texture>board-top.png</texture>
+                        <texture>border-top.png</texture>
                         <aspectratio>stretch</aspectratio>
                     </control>    
                 </focusedlayout>
