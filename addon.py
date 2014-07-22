@@ -49,7 +49,6 @@ ACTION_CONTEXT_MENU   = 117
 
 class BaseWindow(xbmcgui.WindowXML):
     def __init__( self, *args, **kwargs):
-        print ('Create BaseWindow')
         self.session = None
         self.oldWindow = None
         xbmcgui.WindowXML.__init__( self )
@@ -92,7 +91,6 @@ class BaseWindow(xbmcgui.WindowXML):
 
 class HomeWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
-        print ('Create HomeWindow')
         self.navInited = False
         self.homeInited = False
         self.channelInited = False
@@ -100,7 +98,6 @@ class HomeWindow(BaseWindow):
 
 
     def onInit(self):
-        print ('Init HomeWindow')
         BaseWindow.onInit(self)
         self.initHome()
         self.initChannelTop()
@@ -207,7 +204,8 @@ class HomeWindow(BaseWindow):
         else:
             item = self.getControl(controlId).getSelectedItem()
             if item.getProperty('mtype') == 'show':
-                play(item.getProperty('videoid'))
+                openWindow('detail', self.session, sdata=item.getProperty('showid'))
+                #play(item.getProperty('videoid'))
             elif item.getProperty('mtype') == 'channel':
                 openWindow('channel', self.session, sdata=item.getProperty('cid'))
             else:
@@ -238,19 +236,19 @@ class HomeWindow(BaseWindow):
 
 class ChannelWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
-        print ('Create ChannelWindow done')
         self.subInited = False
         self.conInited = False
         self.urlArgs = {'pz':'100', 'pg':'1', 'filter':''}
         self.sdata = kwargs.get('sdata')
         BaseWindow.__init__(self, args, kwargs)
 
+        
     def onInit(self):
-        print ('Init ChannelWindow done')
         BaseWindow.onInit(self)
         self.initSubChannel()
         self.initContent()
 
+        
     def initSubChannel(self):
         if self.subInited:
             return
@@ -333,6 +331,45 @@ class ChannelWindow(BaseWindow):
             self.initContent()
             self.setFocusId(620)
 
+            
+class DetailWindow(BaseWindow):
+    def __init__( self, *args, **kwargs):
+        self.inited = False
+        self.sdata = kwargs.get('sdata')
+        BaseWindow.__init__(self, args, kwargs)
+
+        
+    def onInit(self):
+        BaseWindow.onInit(self)
+        self.init()
+
+        
+    def init(self):
+        if self.inited:
+            return
+
+        data = GetHttpData(HOST + 'layout/smarttv/play/detail?' + IDS + '&id=' + self.sdata)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return            
+        
+        data = data['detail']
+        self.getControl(701).setImage(data['img'])
+        setLabel(self.getControl(702), data, 'title', '', '', '', '')
+        setLabel(self.getControl(703), data, 'reputation', '0.0', '', u'分', '')
+        setLabel(self.getControl(704), data, 'showdate', u'未知', u'上映：', '', '')
+        setLabel(self.getControl(705), data, 'stripe_bottom', u'未知', u'集数：', '', '')
+        setLabel(self.getControl(706), data, 'area', u'未知', u'地区：', '', '/')
+        setLabel(self.getControl(707), data, 'genre', u'未知', u'类型：', '', '/')
+        setLabel(self.getControl(708), data, 'director', u'未知', u'导演：', '', '/')
+        setLabel(self.getControl(709), data, 'performer', u'未知', u'演员：', '', '/')
+        self.getControl(710).setLabel('简介：')
+        setLabel(self.getControl(711), data, 'desc', '', '', '', '')
+
+        self.inited = True
+        
 
 class VstSession:
     def __init__(self,window=None):
@@ -362,16 +399,30 @@ class VstSession:
             return setting == 'true'
         return setting
 
+        
+def setLabel(c, data, k, default, pre, app, sep):
+    try:
+        label = data[k]
+        c.setLabel(pre + sep.join(label) + app)
+    except:
+        try:
+            c.setLabel(pre + str(sep.join(label)) + app) 
+        except:
+            try:
+                c.setLabel(pre + unicode(sep.join(label)) + app) 
+            except:
+                c.setLabel(pre + default + app)   
+
 
 def setProperties(listitem, item):
     for k in item:
-        try:
-            if isinstance(item[k], int):                
-                listitem.setProperty(k, str(item[k]))
-            else:
-                listitem.setProperty(k, item[k])
+        try:     
+            listitem.setProperty(k, item[k])  
         except:
-            pass
+            try:
+                listitem.setProperty(k, str(item[k]))
+            except:
+                listitem.setProperty(k, unicode(item[k]))
 
 
 def getProperty(item, key):
@@ -428,11 +479,12 @@ def play(vid):
 
 def openWindow(window_name,session=None,**kwargs):
     windowFile = '%s.xml' % window_name
-    print ('Open window: ' + windowFile)
     if window_name == 'home':
         w = HomeWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'channel':
         w = ChannelWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+    elif window_name == 'detail':
+        w = DetailWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     else:
         w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     w.doModal()            
@@ -458,10 +510,9 @@ def GetHttpData(url):
         charset = match[0].lower()
         if (charset != 'utf-8') and (charset != 'utf8'):
             httpdata = unicode(httpdata, charset).encode('utf8')
-    print ('Frech done')
     return httpdata
 
 
 if __name__ == '__main__':
-    #openWindow('home')
-    openWindow('detail')
+    openWindow('home')
+    #openWindow('detail', sdata='9ffa9418853611e2a19e')
