@@ -366,7 +366,10 @@ class VstSession:
 def setProperties(listitem, item):
     for k in item:
         try:
-            listitem.setProperty(k, str(item[k]).encode('utf-8'))
+            if isinstance(item[k], int):                
+                listitem.setProperty(k, str(item[k]))
+            else:
+                listitem.setProperty(k, item[k])
         except:
             pass
 
