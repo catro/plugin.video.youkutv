@@ -431,7 +431,7 @@ def openWindow(window_name,session=None,**kwargs):
     elif window_name == 'channel':
         w = ChannelWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     else:
-        return 
+        w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     w.doModal()            
     del w
 
@@ -460,4 +460,5 @@ def GetHttpData(url):
 
 
 if __name__ == '__main__':
-    openWindow('home')
+    #openWindow('home')
+    openWindow('detail')
