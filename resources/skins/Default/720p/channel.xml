@@ -1,0 +1,107 @@
+<window type="window">
+    <defaultcontrol>620</defaultcontrol>
+    <coordinates>
+        <system>1</system>
+        <posx>0</posx>
+        <posy>0</posy>
+    </coordinates>
+    <allowoverlay>no</allowoverlay>
+    <controls>
+        <control type="image">
+            <description>background</description>
+            <posx>0</posx>
+            <posy>0</posy>
+            <width>1280</width>
+            <height>720</height>
+            <texture>bg.png</texture>
+        </control>
+        <control type="image">
+            <description>sub-backgroung</description>
+            <posx>0</posx>
+            <posy>0</posy>
+            <width>213</width>
+            <height>720</height>
+            <texture>search_left_background_1080.png</texture>
+        </control>
+        <control type="image" id="601">
+            <description>channel-icon</description>
+            <posx>20</posx>
+            <posy>20</posy>
+            <width>36</width>
+            <height>36</height>
+            <aspectratio>stretch</aspectratio>
+        </control>
+        <control type="label" id="602">
+            <description>channel-title</description>
+            <posx>65</posx>
+            <posy>20</posy>
+            <width>340</width>
+            <height>60</height>   
+            <font>font30</font>
+            <textcolor>ff005194</textcolor>
+            <align>left</align>
+            <aligny>top</aligny>
+        </control>
+        <control type="panel" id="610">
+            <description>sub-type</description>
+            <posx>0</posx>
+            <posy>80</posy>
+            <width>200</width>
+            <height>600</height>
+            <viewtype>list</viewtype>
+            <onright>620</onright>
+            <itemlayout width="200" height="65">
+                <control type="image">
+                    <posx>20</posx>
+                    <posy>0</posy>
+                    <width>160</width>
+                    <height>1</height>        
+                    <texture>channel_bule_line.png</texture>
+                    <aspectratio>stretch</aspectratio>
+                </control>    
+                <control type="label">
+                    <posx>100</posx>
+                    <posy>0</posy>
+                    <width>200</width>
+                    <height>65</height>   
+                    <font>font16</font>
+                    <textcolor>white</textcolor>
+                    <shadowcolor>80000000</shadowcolor>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <info>ListItem.Label</info>
+                </control>
+            </itemlayout>
+            <focusedlayout width="200" height="65">
+                <control type="image">
+                    <posx>20</posx>
+                    <posy>0</posy>
+                    <width>160</width>
+                    <height>1</height>        
+                    <texture>channel_bule_line.png</texture>
+                    <aspectratio>stretch</aspectratio>
+                </control>    
+                <control type="label">
+                    <posx>100</posx>
+                    <posy>0</posy>
+                    <width>200</width>
+                    <height>65</height>   
+                    <font>font16</font>
+                    <textcolor>white</textcolor>
+                    <shadowcolor>80000000</shadowcolor>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <info>ListItem.Label</info>
+                </control>
+                <control type="image">
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>134</width>
+                    <height>60</height>        
+                    <texture>channel_button_focus_720.png</texture>
+                    <aspectratio>stretch</aspectratio>
+                </control>    
+            </focusedlayout>
+        </control>
+    </controls>
+</window>

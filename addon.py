@@ -14,7 +14,14 @@ HOST='http://tv.api.3g.youku.com/'
 IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39cab341ead7b2aa90f9caf&ver=2.3.0'
 Navigation=['首页', '频道', '排行']
 ContentID=[520, 560, 580]
-ChannelData=[{'cid':'97', 'icon': 'channel_narmal_icon.png', 'title': '电视剧'}]
+ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
+             '669': {'icon': 'channel_child_icon.png', 'title': '少儿'},\
+             '96': {'icon': 'channel_movie_icon.png', 'title': '电影'},\
+             '100': {'icon': 'channel_anime_icon.png', 'title': '动漫'},\
+             '85': {'icon': 'channel_variety_icon.png', 'title': '综艺'},\
+             '84': {'icon': 'channel_documentary_icon.png', 'title': '纪录片'},\
+             '87': {'icon': 'channel_education_icon.png', 'title': '教育'},\
+             }
 
 
 ACTION_MOVE_LEFT      = 1
@@ -84,37 +91,43 @@ class BaseWindow(xbmcgui.WindowXML):
 
 class HomeWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
-        self.inited = False
+        print ('Create HomeWindow')
+        self.navInited = False
+        self.homeInited = False
+        self.channelInited = False
         BaseWindow.__init__(self, args, kwargs)
 
-    def onInit(self):
-        self.initOnce()
-        BaseWindow.onInit(self)
 
-    def initOnce(self):
-        if self.inited:
+    def onInit(self):
+        print ('Init HomeWindow')
+        BaseWindow.onInit(self)
+        self.initHome()
+        self.initChannelTop()
+        self.initNavigation()
+
+
+    def initNavigation(self):
+        if self.navInited:
             return
 
-        print str(self.inited)
+        for Id in ContentID[1:]:
+            self.getControl(Id).setVisible(False)
 
-        #Init navigation
         for item in Navigation:
             listitem = xbmcgui.ListItem(label=item)
             self.getControl(510).addItem(listitem)
-        
-        for Id in ContentID[1:]:
-            self.getControl(Id).setVisible(False)
 
         self.selectedNavigation = 0
         self.getControl(510).getListItem(0).select(True)
         self.setFocusId(510)
-            
-        self.updateHome()
-        self.updateChannelTop()
 
-        self.inited = True
+        self.navInited = True
+
     
-    def updateHome(self):
+    def initHome(self):
+        if self.homeInited:
+            return
+
         data = GetHttpData(HOST + 'tv/main?' + IDS)
         data = json.loads(data)
         if not data['status']:
@@ -160,9 +173,14 @@ class HomeWindow(BaseWindow):
             listitem.setProperty('videoid', item['videoid'])
             listitem.setProperty('mtype', item['mtype'])
             self.getControl(528).addItem(listitem)
+
+        self.homeInited = True
             
 
-    def updateChannelTop(self):
+    def initChannelTop(self):
+        if self.channelInited:
+            return
+
         data = GetHttpData(HOST + 'tv/main/top?' + IDS)
         data = json.loads(data)
         if not data['status']:
@@ -191,6 +209,8 @@ class HomeWindow(BaseWindow):
             listitem.setProperty('top_id', item['top_id'])
             listitem.setProperty('mtype', item['mtype'])
             self.getControl(580).addItem(listitem)
+
+        self.channelInited = True
         
 
     def onClick( self, controlId ):
@@ -201,7 +221,7 @@ class HomeWindow(BaseWindow):
             if item.getProperty('mtype') == 'show':
                 play(item.getProperty('videoid'))
             elif item.getProperty('mtype') == 'channel':
-                openWindow('channel', self.session)
+                openWindow('channel', self.session, sdata=item.getProperty('cid'))
             else:
                 xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
@@ -229,21 +249,39 @@ class HomeWindow(BaseWindow):
 
 class ChannelWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
-        self.inited = False
+        self.subInited = False
+        self.sdata = kwargs.get('sdata')
         BaseWindow.__init__(self, args, kwargs)
 
     def onInit(self):
-        self.initOnce()
         BaseWindow.onInit(self)
+        self.initSubChannel()
 
-    def initOnce(self):
-        if self.inited:
+    def initSubChannel(self):
+        if self.subInited:
             return
 
-        channel=ChannelData['cid':'97']
+        #Title
+        channel=ChannelData[self.sdata]
         self.getControl(601).setImage(channel['icon'])
-        self.getControl(602).setText(channel['title'])
-        self.inited = True
+        self.getControl(602).setLabel(channel['title'])
+
+        #Catagory
+        data = GetHttpData(HOST + 'tv/v2_0/childchannel/list?' + IDS + '&cid=' + self.sdata)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return
+
+        for item in data['results']['result']:
+            listitem = xbmcgui.ListItem(label=item['sub_channel_title'])
+            listitem.setProperty('filter', item['filter'])
+            listitem.setProperty('type', str(item['type']))
+            listitem.setProperty('filter_id', str(item['filter_id']))
+            self.getControl(610).addItem(listitem)
+
+        self.subInited = True
             
 
 class VstSession:
@@ -320,6 +358,7 @@ def play(vid):
 
 def openWindow(window_name,session=None,**kwargs):
     windowFile = '%s.xml' % window_name
+    print ('Open window: ' + windowFile)
     if window_name == 'home':
         w = HomeWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'channel':
@@ -331,6 +370,7 @@ def openWindow(window_name,session=None,**kwargs):
 
 
 def GetHttpData(url):
+    print ('Frech: ' + url)
     req = urllib2.Request(url)
     req.add_header('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) {0}{1}'.
                    format('AppleWebKit/537.36 (KHTML, like Gecko) ',
@@ -348,6 +388,7 @@ def GetHttpData(url):
         charset = match[0].lower()
         if (charset != 'utf-8') and (charset != 'utf8'):
             httpdata = unicode(httpdata, charset).encode('utf8')
+    print ('Frech done')
     return httpdata
 
 
