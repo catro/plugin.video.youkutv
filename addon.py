@@ -287,6 +287,7 @@ class ChannelWindow(BaseWindow):
         if self.conInited:
             return
 
+        self.urlArgs['pg'] = '1'
         self.getControl(620).reset()
         self.updateContent()
             
@@ -330,12 +331,32 @@ class ChannelWindow(BaseWindow):
             self.conInited = False
             self.initContent()
             self.setFocusId(620)
+        else:
+            item = self.getControl(controlId).getSelectedItem()
+            if item.getProperty('type') == 'show':
+                openWindow('detail', self.session, sdata=item.getProperty('showid'))
+                #play(item.getProperty('videoid'))
+            else:
+                xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+
+
+    def onAction(self, action):
+        BaseWindow.onAction(self, action)
+        if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 620:
+            oldPos = self.getControl(620).getSelectedPosition()
+            total = self.getControl(620).size()
+            if total - oldPos <= 5:
+                pg = int(self.urlArgs['pg']) + 1
+                self.urlArgs['pg'] = str(pg)
+                self.updateContent()
+                self.getControl(620).selectItem(oldPos)
 
             
 class DetailWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
         self.inited = False
         self.sdata = kwargs.get('sdata')
+        self.pdata = None
         BaseWindow.__init__(self, args, kwargs)
 
         
@@ -356,6 +377,7 @@ class DetailWindow(BaseWindow):
             return            
         
         data = data['detail']
+        self.pdata = data
         self.getControl(701).setImage(data['img'])
         setLabel(self.getControl(702), data, 'title', '', '', '', '')
         setLabel(self.getControl(703), data, 'reputation', '0.0', '', u'分', '')
@@ -368,9 +390,128 @@ class DetailWindow(BaseWindow):
         self.getControl(710).setLabel('简介：')
         setLabel(self.getControl(711), data, 'desc', '', '', '', '')
 
+        self.getControl(721).setLabel('选集')
+        self.getControl(722).setLabel('收藏')
+        self.getControl(723).setLabel(getNumber(data, 'total_vv'))
+        self.getControl(724).setLabel(getNumber(data, 'total_fav'))
+
+        try:
+            if data['episode_total'] == '1':
+                #self.getControl(721).setVisible(False)
+                self.getControl(721).setEnabled(False)
+        except:
+            pass
+
+        self.getControl(740).reset()
+
+        data = GetHttpData(HOST + 'common/shows/relate?' + IDS + '&id=' + self.sdata)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return            
+
+        for item in data['results']:
+            listitem = xbmcgui.ListItem(label=item['showname'], thumbnailImage=item['show_vthumburl'])
+            setProperties(listitem, item)
+            self.getControl(740).addItem(listitem)
+
         self.inited = True
         
 
+    def onClick( self, controlId ):
+        if controlId == 740:
+            self.sdata = getProperty(self.getControl(740).getSelectedItem(), 'showid')
+            self.inited = False
+            self.init()
+        elif controlId == 720:
+            play(self.pdata['videoid'])
+        elif controlId == 721:
+            openWindow('select', self.session, sdata=self.sdata)
+        else:
+            xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+            
+            
+class SelectWindow(BaseWindow):
+    def __init__( self, *args, **kwargs):
+        self.inited = False
+        self.sdata = kwargs.get('sdata')
+        self.pdata = None
+        self.selected = 0
+        BaseWindow.__init__(self, args, kwargs)
+
+        
+    def onInit(self):
+        BaseWindow.onInit(self)
+        self.init()
+
+        
+    def init(self):
+        if self.inited:
+            return
+
+        self.getControl(801).setLabel('剧集:')
+
+        data = GetHttpData(HOST + 'layout/smarttv/shows/' + self.sdata + '/series?' + IDS)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return            
+
+        self.pdata = data['results']
+
+        total = len(data['results'])
+        for i in range(1, total + 1, 20):
+            start = str(i)
+            if i + 19 < total:
+                end = str(i + 19)
+            else:
+                end = str(total)
+            listitem = xbmcgui.ListItem(label=start + '-' + end)
+            listitem.setProperty('start', start)
+            listitem.setProperty('end', end)
+            self.getControl(810).addItem(listitem)
+
+        self.selectRange(0)
+        self.setFocusId(820)
+
+        self.inited = True
+
+
+    def selectRange(self, index):
+        self.getControl(810).getListItem(self.selected).select(False)
+        item = self.getControl(810).getListItem(index)
+        item.select(True)
+        self.selected = index
+
+        self.getControl(820).reset()
+        start = int(item.getProperty('start'))
+        end = int(item.getProperty('end'))
+
+        for i in range(start, end + 1):
+            listitem = xbmcgui.ListItem(label=str("%.2d"%i))
+            self.getControl(820).addItem(listitem)
+        
+
+    def onClick( self, controlId ):
+        if controlId == 810:
+            self.selectRange(self.getControl(810).getSelectedPosition())
+        else:
+            stage = int(self.getControl(820).getSelectedItem().getLabel())
+            for item in self.pdata:
+                if item['video_stage'] == stage:
+                    play(item['videoid'])
+                    break
+
+
+    def onAction(self, action):
+        BaseWindow.onAction(self, action)
+        if self.getFocusId() == 810:
+            if action.getId() == ACTION_MOVE_LEFT or action.getId() == ACTION_MOVE_RIGHT:
+                self.selectRange(self.getControl(810).getSelectedPosition())
+
+        
 class VstSession:
     def __init__(self,window=None):
         self.window = window
@@ -398,6 +539,23 @@ class VstSession:
         elif isinstance(default,bool):
             return setting == 'true'
         return setting
+
+
+def getNumber(data, k):
+    try:
+        s = data[k]
+        s = s.replace(',', '')
+        n = float(s)
+        if(n > 100000000):
+            f = n / 100000000
+            return str("%.1f"%f) + u'亿次'
+        elif(n > 10000):
+            f = n / 10000
+            return str("%.1f"%f) + u'万次'
+        else:
+            return str(n)
+    except:
+        return '0次'
 
         
 def setLabel(c, data, k, default, pre, app, sep):
@@ -485,6 +643,8 @@ def openWindow(window_name,session=None,**kwargs):
         w = ChannelWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'detail':
         w = DetailWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+    elif window_name == 'select':
+        w = SelectWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     else:
         w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     w.doModal()            
@@ -515,4 +675,3 @@ def GetHttpData(url):
 
 if __name__ == '__main__':
     openWindow('home')
-    #openWindow('detail', sdata='9ffa9418853611e2a19e')

@@ -291,7 +291,7 @@
                         <width>328</width>
                         <height>258</height>
                         <viewtype>list</viewtype>
-                        <orientation>horizon</orientation>
+                        <orientation>horizontal</orientation>
                         <onleft>522</onleft>
                         <onright>528</onright>
                         <onup>524</onup>
@@ -426,7 +426,7 @@
                         <width>328</width>
                         <height>258</height>
                         <viewtype>list</viewtype>
-                        <orientation>horizon</orientation>
+                        <orientation>horizontal</orientation>
                         <onleft>525</onleft>
                         <onright>529</onright>
                         <onup>527</onup>

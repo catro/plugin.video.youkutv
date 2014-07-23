@@ -1,5 +1,5 @@
 <window type="window">
-    <defaultcontrol>730</defaultcontrol>
+    <defaultcontrol>720</defaultcontrol>
     <coordinates>
         <system>1</system>
         <posx>0</posx>
@@ -47,8 +47,8 @@
             <description>thumbnail</description>
             <posx>72</posx>
             <posy>80</posy>
-            <width>249</width>
-            <height>330</height>
+            <width>257</width>
+            <height>340</height>
         </control>
         <control type="group">
             <description>details</description>
@@ -146,7 +146,7 @@
                 <description>desc_label</description>
                 <posx>0</posx>
                 <posy>190</posy>
-                <width>60</width>
+                <width>65</width>
                 <height>50</height>
                 <align>left</align>
                 <aligny>top</aligny>
@@ -155,7 +155,7 @@
             </control>
             <control type="label" id="711">
                 <description>desc</description>
-                <posx>65</posx>
+                <posx>60</posx>
                 <posy>190</posy>
                 <width>820</width>
                 <height>70</height>
@@ -165,6 +165,132 @@
                 <wrapmultiline>true</wrapmultiline>
                 <textcolor>ffb8b8b8</textcolor>
             </control>
+            <control type="group" id="730">
+                <posx>0</posx>
+                <posy>305</posy>
+                <control type="button" id="720">
+                    <description>play</description>
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>120</width>
+                    <height>36</height>
+                    <onright>721</onright>
+                    <ondown>740</ondown>
+                    <texturefocus>detail_play_button_pressed.png</texturefocus>
+                    <texturenofocus>detail_play_button_normal.png</texturenofocus>
+                </control>
+                <control type="button" id="721">
+                    <description>select</description>
+                    <posx>140</posx>
+                    <posy>0</posy>
+                    <width>120</width>
+                    <height>36</height>
+                    <onleft>720</onleft>
+                    <onright>722</onright>
+                    <ondown>740</ondown>
+                    <align>center</align>
+                    <texturefocus>channel_button_focus_720.png</texturefocus>
+                    <texturenofocus>channel_button_normal_720.png</texturenofocus>
+                </control>
+                <control type="button" id="722">
+                    <description>favor</description>
+                    <posx>280</posx>
+                    <posy>0</posy>
+                    <width>120</width>
+                    <height>36</height>
+                    <onleft>721</onleft>
+                    <ondown>740</ondown>
+                    <align>center</align>
+                    <texturefocus>channel_button_focus_720.png</texturefocus>
+                    <texturenofocus>channel_button_normal_720.png</texturenofocus>
+                </control>
+                <control type="image">
+                    <description>play-icon</description>
+                    <posx>440</posx>
+                    <posy>19</posy>
+                    <width>16</width>
+                    <height>16</height>
+                    <texture>detail_play_icon.png</texture>
+                </control>
+                <control type="label" id="723">
+                    <description>play-count</description>
+                    <posx>460</posx>
+                    <posy>16</posy>
+                    <width>120</width>
+                    <height>16</height>
+                    <align>left</align>
+                    <aligny>top</aligny>
+                    <font>font12</font>
+                    <textcolor>ffb8b8b8</textcolor>
+                </control>
+                <control type="image">
+                    <description>favor-icon</description>
+                    <posx>560</posx>
+                    <posy>19</posy>
+                    <width>16</width>
+                    <height>16</height>
+                    <texture>detail_collection_icon.png</texture>
+                </control>
+                <control type="label" id="724">
+                    <description>favor-count</description>
+                    <posx>580</posx>
+                    <posy>16</posy>
+                    <width>120</width>
+                    <height>16</height>
+                    <align>left</align>
+                    <aligny>top</aligny>
+                    <font>font12</font>
+                    <textcolor>ffb8b8b8</textcolor>
+                </control>
+            </control>
+        </control>
+        <control type="image">
+            <description>detail_seg</description>
+            <posx>0</posx>
+            <posy>450</posy>
+            <width>1280</width>
+            <height>1</height>
+            <texture>detail-seg.png</texture>
+        </control>
+        <control type="panel" id="740">
+            <description>related</description>
+            <posx>100</posx>
+            <posy>480</posy>
+            <width>1050</width>
+            <height>240</height>
+            <viewtype>list</viewtype>
+            <orientation>horizontal</orientation>
+            <onup>730</onup>
+            <onleft>-</onleft>
+            <onright>-</onright>
+            <itemlayout width="180" height="300">
+                <control type="image">
+                    <posx>10</posx>
+                    <posy>10</posy>
+                    <width>120</width>
+                    <height>180</height>        
+                    <info>ListItem.Icon</info>
+                    <aspectratio>stretch</aspectratio>
+                </control>    
+            </itemlayout>
+            <focusedlayout width="180" height="300">
+                <control type="image">
+                    <posx>10</posx>
+                    <posy>10</posy>
+                    <width>120</width>
+                    <height>180</height>        
+                    <info>ListItem.Icon</info>
+                    <aspectratio>stretch</aspectratio>
+                </control>    
+                <control type="image">
+                    <posx>6</posx>
+                    <posy>6</posy>
+                    <width>128</width>
+                    <height>188</height>        
+                    <texture>border-content.png</texture>
+                    <aspectratio>stretch</aspectratio>
+                </control>    
+            </focusedlayout>
         </control>
     </controls>
 </window>
