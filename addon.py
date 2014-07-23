@@ -459,9 +459,11 @@ class SelectWindow(BaseWindow):
         if data['status'] != 'success':
             return            
 
-        self.pdata = data['results']
+        data = data['results']
+        data.sort(lambda x,y: cmp(x['video_stage'], y['video_stage']))
+        self.pdata = data
 
-        total = len(data['results'])
+        total = len(data)
         for i in range(1, total + 1, 20):
             start = str(i)
             if i + 19 < total:
@@ -489,8 +491,25 @@ class SelectWindow(BaseWindow):
         start = int(item.getProperty('start'))
         end = int(item.getProperty('end'))
 
+        fromTitle = False
+        if len(self.pdata) > 1:
+            if self.pdata[0]['title'] != self.pdata[1]['title']:
+                lastSpace = 0
+                for i in range(1, len(self.pdata[0]['title'])):
+                    if self.pdata[0]['title'][:i] != self.pdata[1]['title'][:i]:
+                        break
+                    if self.pdata[0]['title'][i - 1] == ' ':
+                        lastSpace = i
+                if lastSpace > 0:
+                    trim = self.pdata[0]['title'][:(i-1)]
+                else:
+                    trim = self.pdata[0]['title'][:lastSpace]
+                fromTitle = True
         for i in range(start, end + 1):
-            listitem = xbmcgui.ListItem(label=str("%.2d"%i))
+            if fromTitle == True:
+                listitem = xbmcgui.ListItem(label=self.pdata[i-1]['title'].replace(trim, ''))
+            else:
+                listitem = xbmcgui.ListItem(label=str(self.pdata[i-1]['video_stage']))
             self.getControl(820).addItem(listitem)
         
 
@@ -498,11 +517,7 @@ class SelectWindow(BaseWindow):
         if controlId == 810:
             self.selectRange(self.getControl(810).getSelectedPosition())
         else:
-            stage = int(self.getControl(820).getSelectedItem().getLabel())
-            for item in self.pdata:
-                if item['video_stage'] == stage:
-                    play(item['videoid'])
-                    break
+            play(self.pdata[self.getControl(820).getSelectedPosition()]['videoid'])
 
 
     def onAction(self, action):

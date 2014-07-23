@@ -100,7 +100,7 @@
                     <posy>0</posy>
                     <width>120</width>
                     <height>60</height>   
-                    <font>font14</font>
+                    <font>font12</font>
                     <textcolor>white</textcolor>
                     <shadowcolor>80000000</shadowcolor>
                     <align>center</align>
@@ -122,7 +122,7 @@
                     <posy>0</posy>
                     <width>120</width>
                     <height>60</height>   
-                    <font>font14</font>
+                    <font>font12</font>
                     <textcolor>white</textcolor>
                     <shadowcolor>80000000</shadowcolor>
                     <align>center</align>
