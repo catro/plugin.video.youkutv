@@ -432,18 +432,44 @@ class DetailWindow(BaseWindow):
             xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
             
             
-class SelectWindow(BaseWindow):
+class SelectWindow(xbmcgui.WindowXMLDialog):
     def __init__( self, *args, **kwargs):
         self.inited = False
         self.sdata = kwargs.get('sdata')
         self.pdata = None
         self.selected = 0
-        BaseWindow.__init__(self, args, kwargs)
+        self.session = None
+        self.oldWindow = None
+        xbmcgui.WindowXML.__init__( self )
+        
+
+    def doClose(self):
+        self.session.window = self.oldWindow
+        self.close()
 
         
     def onInit(self):
-        BaseWindow.onInit(self)
+        if self.session:
+            self.session.window = self
+        else:
+            try:
+                self.session = VstSession(self)
+            except:
+                self.close()
+        self.setSessionWindow()
         self.init()
+        
+        
+    def onFocus( self, controlId ):
+        self.controlId = controlId
+        
+        
+    def setSessionWindow(self):
+        try:
+            self.oldWindow = self.session.window
+        except:
+            self.oldWindow=self
+        self.session.window = self        
 
         
     def init(self):
@@ -517,12 +543,14 @@ class SelectWindow(BaseWindow):
         if controlId == 810:
             self.selectRange(self.getControl(810).getSelectedPosition())
         else:
+            self.doClose()
             play(self.pdata[self.getControl(820).getSelectedPosition()]['videoid'])
 
 
     def onAction(self, action):
-        BaseWindow.onAction(self, action)
-        if self.getFocusId() == 810:
+        if action.getId() == ACTION_PARENT_DIR or action.getId() == ACTION_PREVIOUS_MENU:
+            self.doClose()
+        elif self.getFocusId() == 810:
             if action.getId() == ACTION_MOVE_LEFT or action.getId() == ACTION_MOVE_RIGHT:
                 self.selectRange(self.getControl(810).getSelectedPosition())
 
