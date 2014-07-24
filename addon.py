@@ -791,29 +791,9 @@ def play(vid):
             stype = selstypes[0]
         
         playurl = r'http://v.youku.com/player/getM3U8/vid/' + vid + r'/type/' + stype + '/video.m3u8'
-        playlist = xbmc.PlayList(1)
-        playlist.clear()
-        title =" 第"+str(1)+"/"+str(1)+"节"
-        listitem=xbmcgui.ListItem(title)
-        listitem.setInfo(type="Video",infoLabels={"Title":title})
-        playlist.add(playurl, listitem)
-        xbmc.Player().play(playlist)
-        return
-        
-        flvcdurl='http://www.flvcd.com/parse.php?format=super&kw='+urllib.quote_plus(url)
-        result = GetHttpData(flvcdurl)
-        foobars = re.compile('(http://k.youku.com/.*)"\starget', re.M).findall(result)
-        if len(foobars) < 1:
-            xbmcgui.Dialog().ok('提示框', '付费视频，无法播放')
-            return
-        playlist = xbmc.PlayList(1)
-        playlist.clear()
-        for i in range(0,len(foobars)):
-            title =" 第"+str(i+1)+"/"+str(len(foobars))+"节"
-            listitem=xbmcgui.ListItem(title)
-            listitem.setInfo(type="Video",infoLabels={"Title":title})
-            playlist.add(foobars[i], listitem)
-        xbmc.Player().play(playlist)
+        listitem=xbmcgui.ListItem()
+        listitem.setInfo(type="Video",infoLabels={"Title":movdat['title']})
+        xbmc.Player().play(playurl, listitem)
     except:
         xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
 
