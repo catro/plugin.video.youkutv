@@ -205,9 +205,10 @@ class HomeWindow(BaseWindow):
             item = self.getControl(controlId).getSelectedItem()
             if item.getProperty('mtype') == 'show':
                 openWindow('detail', self.session, sdata=item.getProperty('showid'))
-                #play(item.getProperty('videoid'))
             elif item.getProperty('mtype') == 'channel':
                 openWindow('channel', self.session, sdata=item.getProperty('cid'))
+            elif item.getProperty('mtype') == 'all_videos':
+                openWindow('other', self.session)
             else:
                 xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
@@ -350,6 +351,145 @@ class ChannelWindow(BaseWindow):
                 self.urlArgs['pg'] = str(pg)
                 self.updateContent()
                 self.getControl(620).selectItem(oldPos)
+                
+
+class OtherWindow(BaseWindow):
+    def __init__( self, *args, **kwargs):
+        self.subInited = False
+        self.typeInited = False
+        self.conInited = False
+        self.urlArgs = {'pz':'100', 'pg':'1', 'cid':'', 'ob':'2'}
+        BaseWindow.__init__(self, args, kwargs)
+
+        
+    def onInit(self):
+        BaseWindow.onInit(self)
+        self.initType()
+        self.initSubChannel()
+        self.initContent()
+
+        
+    def initType(self):
+        if self.typeInited:
+            return
+            
+        listitem = xbmcgui.ListItem(label='最新上线')
+        self.getControl(903).addItem(listitem)
+        listitem = xbmcgui.ListItem(label='最多播放')
+        self.getControl(903).addItem(listitem)
+        self.getControl(903).getListItem(1).select(True)
+    
+        self.typeInited = True
+        
+        
+    def initSubChannel(self):
+        if self.subInited:
+            return
+
+        #Title
+        self.getControl(901).setImage('channel_member_icon.png')
+        self.getControl(902).setLabel('其它')
+
+        #Catagory
+        data = GetHttpData(HOST + 'openapi-wireless/layout/smarttv/channellist?' + IDS)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return
+
+        for item in data['results']:
+            listitem = xbmcgui.ListItem(label=item['title'])
+            setProperties(listitem, item)
+            self.getControl(910).addItem(listitem)
+
+        self.selectedNavigation = 0
+        self.getControl(910).getListItem(0).select(True)
+        self.setFocusId(910)
+        self.urlArgs['cid'] = getProperty(self.getControl(910).getListItem(0), 'cid')
+
+        self.subInited = True
+
+
+    def initContent(self):
+        if self.conInited:
+            return
+
+        self.urlArgs['pg'] = '1'
+        self.getControl(920).reset()
+        self.updateContent()
+            
+        self.conInited = True
+
+
+    def updateContent(self):
+        url = HOST + 'layout/smarttv/item_list?' + IDS
+        for k in self.urlArgs:
+            url = url + '&' + k + '=' + urllib.quote_plus(self.urlArgs[k])
+
+        data = GetHttpData(url)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return
+
+        for item in data['results']:
+            if item.has_key('show_thumburl_hd'):
+                listitem = xbmcgui.ListItem(label=item['showname'], label2=item['duration'], thumbnailImage=item['show_thumburl_hd'])
+            else:
+                listitem = xbmcgui.ListItem(label=item['showname'], label2=item['duration'], thumbnailImage=item['show_thumburl'])
+            setProperties(listitem, item)
+            self.getControl(920).addItem(listitem)
+
+
+    def updateSelection(self):
+        if self.getFocusId() == 910:
+            if self.selectedNavigation != self.getControl(910).getSelectedPosition():
+                #Disable old selection
+                self.getControl(910).getListItem(self.selectedNavigation).select(False)
+                #Enable new selection
+                self.selectedNavigation = self.getControl(910).getSelectedPosition()
+                self.getControl(910).getSelectedItem().select(True)
+        
+
+    def onClick( self, controlId ):
+        if controlId == 910:
+            self.urlArgs['cid'] = getProperty(self.getControl(910).getSelectedItem(), 'cid')
+
+            self.updateSelection()
+
+            self.conInited = False
+            self.initContent()
+            self.setFocusId(920)
+        elif controlId == 903:
+            if self.getControl(903).getSelectedItem().isSelected() == False:
+                self.getControl(903).getListItem(int(self.urlArgs['ob']) - 1).select(False)
+                self.urlArgs['ob'] = str(self.getControl(903).getSelectedPosition() + 1)
+                self.getControl(903).getSelectedItem().select(True)
+                self.conInited = False
+                self.initContent()
+                self.setFocusId(920)
+        else:
+            item = self.getControl(controlId).getSelectedItem()
+            if item.getProperty('type') == 'show':
+                openWindow('detail', self.session, sdata=item.getProperty('tid'))
+            elif item.getProperty('type') == 'video':
+                play(item.getProperty('tid'))
+            else:
+                xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+
+
+    def onAction(self, action):
+        BaseWindow.onAction(self, action)
+        if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 920:
+            oldPos = self.getControl(920).getSelectedPosition()
+            total = self.getControl(920).size()
+            if total - oldPos <= 5:
+                pg = int(self.urlArgs['pg']) + 1
+                self.urlArgs['pg'] = str(pg)
+                self.updateContent()
+                self.getControl(920).selectItem(oldPos)
 
             
 class DetailWindow(BaseWindow):
@@ -688,6 +828,8 @@ def openWindow(window_name,session=None,**kwargs):
         w = DetailWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'select':
         w = SelectWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+    elif window_name == 'other':
+        w = OtherWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     else:
         w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     w.doModal()            
