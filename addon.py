@@ -2,8 +2,11 @@
 # default.py
 
 import xbmcgui, xbmcaddon, xbmc
-import json, sys, urllib, urllib2, gzip, StringIO, re
-from xbmcswift2 import Plugin
+import json, sys, urllib, urllib2, gzip, StringIO, re, os
+try:
+   import StorageServer
+except:
+   import storageserverdummy as StorageServer
 
 __addonid__ = "plugin.video.youkutv"
 __addon__ = xbmcaddon.Addon(id=__addonid__)
@@ -11,8 +14,7 @@ __cwd__ = __addon__.getAddonInfo('path')
 __profile__    = xbmc.translatePath( __addon__.getAddonInfo('profile') )
 __resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
 sys.path.append (__resource__)
-plugin = Plugin()
-epcache = plugin.get_storage('epcache', TTL=512640)
+cache = StorageServer.StorageServer(__addonid__, 8760)
 HOST='http://tv.api.3g.youku.com/'
 IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39cab341ead7b2aa90f9caf&ver=2.3.0'
 Navigation=['首页', '频道', '排行']
@@ -543,11 +545,8 @@ class FavorWindow(BaseWindow):
 
 
     def updateContent(self):
-        if 'favor' not in epcache:
-            return
-
-        for item in epcache['favor']:
-            listitem = xbmcgui.ListItem(label=item['showname'], label2=item['stripe_bottom'], thumbnailImage=item['show_vthumburl_hd'])
+        for item in cache.get('favor').values():
+            listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['img'])
             setProperties(listitem, item)
             self.getControl(1020).addItem(listitem)
 
@@ -567,7 +566,8 @@ class FavorWindow(BaseWindow):
             self.updateSelection()
             self.conInited = False
             self.initContent()
-            self.setFocusId(1020)
+            if self.getControl(1020).size() > 0:
+                self.setFocusId(1020)
         else:
             item = self.getControl(controlId).getSelectedItem()
             if item.getProperty('type') == 'show':
@@ -630,6 +630,13 @@ class DetailWindow(BaseWindow):
 
         self.getControl(721).setLabel('选集')
         self.getControl(722).setLabel('收藏')
+        try:
+            ret = cache.get('favor')
+        except:
+            ret = None
+        if not ret:
+            if ret.has_key(self.sdata):
+                self.getControl(722).setLabel('已收藏')
         self.getControl(723).setLabel(getNumber(data, 'total_vv'))
         self.getControl(724).setLabel(getNumber(data, 'total_fav'))
 
@@ -666,8 +673,31 @@ class DetailWindow(BaseWindow):
             play(self.pdata['videoid'])
         elif controlId == 721:
             openWindow('select', self.session, sdata=self.sdata)
+        elif controlId == 722:
+            self.changeFavor()
         else:
             xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+
+
+    def changeFavor(self):
+        try:
+            ret = cache.get('favor')
+        except:
+            ret = None
+        if not ret:
+            cache.set('favor', repr({self.sdata:  self.pdata}))
+            self.getControl(722).setLabel('已收藏')
+        elif ret.has_key(self.sdata):
+            del(ret[self.sdata])
+            cache.set('favor', repr(ret))
+            self.getControl(722).setLabel('收藏')
+        else:
+            ret[self.sdata] = self.pdata
+            cache.set('favor', repr(ret))
+            self.getControl(722).setLabel('已收藏')
+
+        plugin.run()
+
             
             
 class SelectWindow(xbmcgui.WindowXMLDialog):

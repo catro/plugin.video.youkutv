@@ -31,7 +31,7 @@
             <height>36</height>
             <aspectratio>stretch</aspectratio>
         </control>
-        <control type="label" id="1020">
+        <control type="label" id="1002">
             <description>channel-title</description>
             <posx>65</posx>
             <posy>20</posy>
@@ -49,7 +49,7 @@
             <width>200</width>
             <height>600</height>
             <viewtype>list</viewtype>
-            <onright>620</onright>
+            <onright>1020</onright>
             <itemlayout width="200" height="65">
                 <control type="image">
                     <posx>20</posx>
@@ -112,7 +112,7 @@
             <width>1000</width>
             <height>600</height>
             <viewtype>list</viewtype>
-            <onleft>610</onleft>
+            <onleft>1010</onleft>
             <onup>-</onup>
             <ondown>-</ondown>
             <itemlayout width="180" height="300">
