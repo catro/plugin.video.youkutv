@@ -4,7 +4,6 @@
     <import addon="xbmc.python" version="2.1.0"/>
     <import addon="script.module.xbmcswift2" version="2.4.0"/>
   </requires>
-  </requires>
   <extension point="xbmc.python.script" library="addon.py">
     <provides>video</provides>
   </extension>
