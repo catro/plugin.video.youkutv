@@ -3,6 +3,7 @@
 
 import xbmcgui, xbmcaddon, xbmc
 import json, sys, urllib, urllib2, gzip, StringIO, re
+from xbmcswift2 import Plugin
 
 __addonid__ = "plugin.video.youkutv"
 __addon__ = xbmcaddon.Addon(id=__addonid__)
@@ -10,6 +11,8 @@ __cwd__ = __addon__.getAddonInfo('path')
 __profile__    = xbmc.translatePath( __addon__.getAddonInfo('profile') )
 __resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
 sys.path.append (__resource__)
+plugin = Plugin()
+epcache = plugin.get_storage('epcache', TTL=512640)
 HOST='http://tv.api.3g.youku.com/'
 IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39cab341ead7b2aa90f9caf&ver=2.3.0'
 Navigation=['首页', '频道', '排行']
@@ -209,6 +212,8 @@ class HomeWindow(BaseWindow):
                 openWindow('channel', self.session, sdata=item.getProperty('cid'))
             elif item.getProperty('mtype') == 'all_videos':
                 openWindow('other', self.session)
+            elif item.getProperty('mtype') == 'favor':
+                openWindow('favor', self.session)
             else:
                 xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
@@ -470,6 +475,99 @@ class OtherWindow(BaseWindow):
                 self.conInited = False
                 self.initContent()
                 self.setFocusId(920)
+        else:
+            item = self.getControl(controlId).getSelectedItem()
+            if item.getProperty('type') == 'show':
+                openWindow('detail', self.session, sdata=item.getProperty('tid'))
+            elif item.getProperty('type') == 'video':
+                play(item.getProperty('tid'))
+            else:
+                xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+
+
+    def onAction(self, action):
+        BaseWindow.onAction(self, action)
+        if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 920:
+            oldPos = self.getControl(920).getSelectedPosition()
+            total = self.getControl(920).size()
+            if total - oldPos <= 5:
+                pg = int(self.urlArgs['pg']) + 1
+                self.urlArgs['pg'] = str(pg)
+                self.updateContent()
+                self.getControl(920).selectItem(oldPos)
+                                
+
+class FavorWindow(BaseWindow):
+    def __init__( self, *args, **kwargs):
+        self.subInited = False
+        self.conInited = False
+        BaseWindow.__init__(self, args, kwargs)
+
+        
+    def onInit(self):
+        BaseWindow.onInit(self)
+        self.initSubChannel()
+        self.initContent()
+
+        
+    def initSubChannel(self):
+        if self.subInited:
+            return
+
+        #Title
+        self.getControl(1001).setImage('icon_my_collect.png')
+        self.getControl(1002).setLabel('收藏')
+
+        #Catagory
+        listitem = xbmcgui.ListItem(label='节目')
+        self.getControl(1010).addItem(listitem)
+        listitem = xbmcgui.ListItem(label='视频')
+        self.getControl(1010).addItem(listitem)
+
+        self.selectedNavigation = 0
+        self.getControl(1010).getListItem(0).select(True)
+        self.setFocusId(1010)
+
+        self.subInited = True
+
+
+    def initContent(self):
+        if self.conInited:
+            return
+
+        self.getControl(1020).reset()
+        if self.selectedNavigation == 0:
+            self.updateContent()
+            
+        self.conInited = True
+
+
+    def updateContent(self):
+        if 'favor' not in epcache:
+            return
+
+        for item in epcache['favor']:
+            listitem = xbmcgui.ListItem(label=item['showname'], label2=item['stripe_bottom'], thumbnailImage=item['show_vthumburl_hd'])
+            setProperties(listitem, item)
+            self.getControl(1020).addItem(listitem)
+
+
+    def updateSelection(self):
+        if self.getFocusId() == 1010:
+            if self.selectedNavigation != self.getControl(1010).getSelectedPosition():
+                #Disable old selection
+                self.getControl(1010).getListItem(self.selectedNavigation).select(False)
+                #Enable new selection
+                self.selectedNavigation = self.getControl(1010).getSelectedPosition()
+                self.getControl(1010).getSelectedItem().select(True)
+        
+
+    def onClick( self, controlId ):
+        if controlId == 1010:
+            self.updateSelection()
+            self.conInited = False
+            self.initContent()
+            self.setFocusId(1020)
         else:
             item = self.getControl(controlId).getSelectedItem()
             if item.getProperty('type') == 'show':
@@ -810,6 +908,8 @@ def openWindow(window_name,session=None,**kwargs):
         w = SelectWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'other':
         w = OtherWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+    elif window_name == 'favor':
+        w = FavorWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     else:
         w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     w.doModal()            
