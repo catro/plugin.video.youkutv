@@ -2,7 +2,7 @@
 # default.py
 
 import xbmcgui, xbmcaddon, xbmc
-import json, sys, urllib, urllib2, gzip, StringIO, re, os
+import json, sys, urllib, urllib2, gzip, StringIO, re, os, time
 try:
    import StorageServer
 except:
@@ -545,7 +545,14 @@ class FavorWindow(BaseWindow):
 
 
     def updateContent(self):
-        for item in cache.get('favor').values():
+        try:
+            ret = eval(cache.get('favor'))
+        except:
+            ret = None
+        if ret == None:
+            return
+        ret = sorted(ret.values(), lambda y,x: cmp(x['addedTime'], y['addedTime']))
+        for item in ret:
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['img'])
             setProperties(listitem, item)
             self.getControl(1020).addItem(listitem)
@@ -568,14 +575,24 @@ class FavorWindow(BaseWindow):
             self.initContent()
             if self.getControl(1020).size() > 0:
                 self.setFocusId(1020)
+        elif controlId == 1020:
+            try:
+                retOld = cache.get('favor')
+            except:
+                retOld = None
+            showid = self.getControl(1020).getSelectedItem().getProperty('showid')
+            openWindow('detail', self.session, sdata=showid)
+            try:
+                ret = cache.get('favor')
+            except:
+                ret = None
+
+            if retOld != ret:
+                self.conInited = False
+                self.initContent()
+                self.setFocusId(1020)
         else:
-            item = self.getControl(controlId).getSelectedItem()
-            if item.getProperty('type') == 'show':
-                openWindow('detail', self.session, sdata=item.getProperty('tid'))
-            elif item.getProperty('type') == 'video':
-                play(item.getProperty('tid'))
-            else:
-                xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+            xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
 
     def onAction(self, action):
@@ -629,14 +646,18 @@ class DetailWindow(BaseWindow):
         setLabel(self.getControl(711), data, 'desc', '', '', '', '')
 
         self.getControl(721).setLabel('选集')
-        self.getControl(722).setLabel('收藏')
+        added = True
         try:
-            ret = cache.get('favor')
+            ret = eval(cache.get('favor'))
         except:
             ret = None
-        if not ret:
+        if ret != None:
             if ret.has_key(self.sdata):
-                self.getControl(722).setLabel('已收藏')
+                added = False
+        if added:
+            self.getControl(722).setLabel('收藏')
+        else:
+            self.getControl(722).setLabel('已收藏')
         self.getControl(723).setLabel(getNumber(data, 'total_vv'))
         self.getControl(724).setLabel(getNumber(data, 'total_fav'))
 
@@ -681,10 +702,11 @@ class DetailWindow(BaseWindow):
 
     def changeFavor(self):
         try:
-            ret = cache.get('favor')
+            ret = eval(cache.get('favor'))
         except:
             ret = None
-        if not ret:
+        if ret == None:
+            self.pdata['addedTime'] = time.time()
             cache.set('favor', repr({self.sdata:  self.pdata}))
             self.getControl(722).setLabel('已收藏')
         elif ret.has_key(self.sdata):
@@ -692,12 +714,10 @@ class DetailWindow(BaseWindow):
             cache.set('favor', repr(ret))
             self.getControl(722).setLabel('收藏')
         else:
+            self.pdata['addedTime'] = time.time()
             ret[self.sdata] = self.pdata
             cache.set('favor', repr(ret))
             self.getControl(722).setLabel('已收藏')
-
-        plugin.run()
-
             
             
 class SelectWindow(xbmcgui.WindowXMLDialog):
