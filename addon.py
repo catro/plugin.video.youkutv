@@ -14,7 +14,7 @@ __cwd__ = __addon__.getAddonInfo('path')
 __profile__    = xbmc.translatePath( __addon__.getAddonInfo('profile') )
 __resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
 sys.path.append (__resource__)
-cache = StorageServer.StorageServer(__addonid__, 8760)
+cache = StorageServer.StorageServer(__addonid__, 87600)
 HOST='http://tv.api.3g.youku.com/'
 IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39cab341ead7b2aa90f9caf&ver=2.3.0'
 Navigation=['首页', '频道', '排行']
