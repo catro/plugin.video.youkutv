@@ -216,6 +216,8 @@ class HomeWindow(BaseWindow):
                 openWindow('other', self.session)
             elif item.getProperty('mtype') == 'favor':
                 openWindow('favor', self.session)
+            elif item.getProperty('mtype') == 'history':
+                openWindow('history', self.session)
             else:
                 xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
@@ -593,18 +595,61 @@ class FavorWindow(BaseWindow):
                 self.setFocusId(1020)
         else:
             xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+ 
+
+class HistoryWindow(BaseWindow):
+    def __init__( self, *args, **kwargs):
+        self.subInited = False
+        self.conInited = False
+        BaseWindow.__init__(self, args, kwargs)
+
+        
+    def onInit(self):
+        BaseWindow.onInit(self)
+        self.initSubChannel()
+        self.initContent()
+
+        
+    def initSubChannel(self):
+        if self.subInited:
+            return
+
+        #Title
+        self.getControl(1101).setImage('icon_my_history.png')
+        self.getControl(1102).setLabel('历史')
+ 
+        self.subInited = True
 
 
-    def onAction(self, action):
-        BaseWindow.onAction(self, action)
-        if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 920:
-            oldPos = self.getControl(920).getSelectedPosition()
-            total = self.getControl(920).size()
-            if total - oldPos <= 5:
-                pg = int(self.urlArgs['pg']) + 1
-                self.urlArgs['pg'] = str(pg)
-                self.updateContent()
-                self.getControl(920).selectItem(oldPos)
+    def initContent(self):
+        if self.conInited:
+            return
+
+        self.getControl(1110).reset()
+        self.updateContent()
+        self.setFocusId(1110)
+            
+        self.conInited = True
+
+
+    def updateContent(self):
+        try:
+            ret = eval(cache.get('history'))
+        except:
+            ret = None
+        if ret == None:
+            return
+        ret = sorted(ret.values(), lambda y,x: cmp(x['addedTime'], y['addedTime']))
+        for item in ret:
+            listitem = xbmcgui.ListItem(label=item['title'], label2=item['vid'], thumbnailImage=item['logo'])
+            self.getControl(1110).addItem(listitem)
+
+
+    def onClick( self, controlId ):
+        play(self.getControl(1110).getSelectedItem().getLabel2())
+        self.conInited = False
+        self.initContent()
+        self.setFocusId(1110)
 
             
 class DetailWindow(BaseWindow):
@@ -944,6 +989,25 @@ def play(vid):
         xbmc.Player().play(playurl, listitem)
     except:
         xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
+        return
+
+    #Add to history
+    data = {'addedTime': time.time(), \
+            'title': movdat['title'], \
+            'vid': vid, \
+            'logo': movdat['logo']}
+    try:
+        ret = eval(cache.get('history'))
+    except:
+        ret = None
+    if ret == None:
+        cache.set('history', repr({vid: data}))
+    elif ret.has_key(vid):
+        ret[vid] = data
+        cache.set('history', repr(ret))
+    else:
+        ret[vid] = data
+        cache.set('history', repr(ret))
 
 
 def openWindow(window_name,session=None,**kwargs):
@@ -960,6 +1024,8 @@ def openWindow(window_name,session=None,**kwargs):
         w = OtherWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'favor':
         w = FavorWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+    elif window_name == 'history':
+        w = HistoryWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     else:
         w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     w.doModal()            
