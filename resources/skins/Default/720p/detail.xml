@@ -45,9 +45,9 @@
         </control>
         <control type="image" id="701">
             <description>thumbnail</description>
-            <posx>72</posx>
+            <posx>102</posx>
             <posy>80</posy>
-            <width>257</width>
+            <width>227</width>
             <height>340</height>
         </control>
         <control type="group">
