@@ -505,13 +505,15 @@ class SearchWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
         self.subInited = False
         self.conInited = False
+        self.inputs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        self.keywords = ''
         BaseWindow.__init__(self, args, kwargs)
 
         
     def onInit(self):
         BaseWindow.onInit(self)
         self.initSubChannel()
-        #self.initContent()
+        self.initContent()
 
         
     def initSubChannel(self):
@@ -524,6 +526,10 @@ class SearchWindow(BaseWindow):
         self.getControl(1204).setLabel('退格')
         self.getControl(1205).setLabel('搜索')
 
+        for ch in self.inputs:
+            listitem = xbmcgui.ListItem(label=ch)
+            self.getControl(1210).addItem(listitem)
+
         self.subInited = True
 
 
@@ -531,7 +537,16 @@ class SearchWindow(BaseWindow):
         if self.conInited:
             return
 
-        self.getControl(1020).reset()
+        if len(self.keywords) == 0:
+            self.getControl(1212).setLabel('大家都在搜:')
+            self.getControl(1211).setLabel('[COLOR=grey]输入搜索内容[/COLOR]')
+        else:
+            self.getControl(1212).setLabel('猜你想搜:')
+            self.getControl(1211).setLabel(self.keywords)
+
+        return
+
+        self.getControl(1221).reset()
         if self.selectedNavigation == 0:
             self.updateContent()
             
@@ -563,12 +578,17 @@ class SearchWindow(BaseWindow):
         
 
     def onClick( self, controlId ):
-        if controlId == 1010:
-            self.updateSelection()
-            self.conInited = False
-            self.initContent()
-            if self.getControl(1020).size() > 0:
-                self.setFocusId(1020)
+        if controlId == 1210:
+            ch = self.inputs[self.getControl(1210).getSelectedPosition()]
+            self.keywords = self.keywords + ch
+        elif controlId == 1201:
+            return
+        elif controlId == 1202:
+            self.keywords = self.keywords + ' '
+        elif controlId == 1203:
+            self.keywords = ''
+        elif controlId == 1204:
+            self.keywords = self.keywords[:-1]
         elif controlId == 1020:
             try:
                 retOld = cache.get('favor')
@@ -588,6 +608,12 @@ class SearchWindow(BaseWindow):
         else:
             xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
  
+        if len(self.keywords) == 0:
+            self.getControl(1212).setLabel('大家都在搜:')
+            self.getControl(1211).setLabel('[COLOR=grey]输入搜索内容[/COLOR]')
+        else:
+            self.getControl(1212).setLabel('猜你想搜:')
+            self.getControl(1211).setLabel(self.keywords)
                                 
 
 class FavorWindow(BaseWindow):

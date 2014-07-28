@@ -33,65 +33,82 @@
             <texture>search-input.png</texture>
             <aspectratio>stretch</aspectratio>
         </control>
-        <control type="button" id="1201">
-            <description>key-Chinese</description>
-            <posx>170</posx>
-            <posy>165</posy>
-            <width>50</width>
-            <height>50</height>
-            <font>font8</font>
-            <align>center</align>
-            <texturefocus>search-input-small-focus.png</texturefocus>
-            <texturenofocus>search-input-small.png</texturenofocus>
-            <aspectratio>stretch</aspectratio>
-        </control>
-        <control type="button" id="1202">
-            <description>key-space</description>
-            <posx>240</posx>
-            <posy>165</posy>
-            <width>50</width>
-            <height>50</height>
-            <font>font8</font>
-            <align>center</align>
-            <texturefocus>search-input-small-focus.png</texturefocus>
-            <texturenofocus>search-input-small.png</texturenofocus>
-            <aspectratio>stretch</aspectratio>
-        </control>
-        <control type="button" id="1203">
-            <description>key-clear</description>
-            <posx>310</posx>
-            <posy>165</posy>
-            <width>50</width>
-            <height>50</height>
-            <font>font8</font>
-            <align>center</align>
-            <texturefocus>search-input-small-focus.png</texturefocus>
-            <texturenofocus>search-input-small.png</texturenofocus>
-            <aspectratio>stretch</aspectratio>
-        </control>
-        <control type="button" id="1204">
-            <description>key-backspace</description>
-            <posx>380</posx>
-            <posy>165</posy>
-            <width>50</width>
-            <height>50</height>
-            <font>font8</font>
-            <align>center</align>
-            <texturefocus>search-input-small-focus.png</texturefocus>
-            <texturenofocus>search-input-small.png</texturenofocus>
-            <aspectratio>stretch</aspectratio>
-        </control>
-        <control type="button" id="1205">
-            <description>key-search</description>
-            <posx>450</posx>
-            <posy>165</posy>
-            <width>120</width>
-            <height>50</height>
-            <font>font8</font>
-            <align>center</align>
-            <texturefocus>search-input-meduim-focus.png</texturefocus>
-            <texturenofocus>search-input-meduim.png</texturenofocus>
-            <aspectratio>stretch</aspectratio>
+        <control type="group" id="1200">
+            <control type="button" id="1201">
+                <description>key-Chinese</description>
+                <posx>170</posx>
+                <posy>165</posy>
+                <width>50</width>
+                <height>50</height>
+                <font>font8</font>
+                <align>center</align>
+                <texturefocus>search-input-small-focus.png</texturefocus>
+                <texturenofocus>search-input-small.png</texturenofocus>
+                <aspectratio>stretch</aspectratio>
+                <ondown>1210</ondown>
+                <onleft>1205</onleft>
+                <onright>1202</onright>
+            </control>
+            <control type="button" id="1202">
+                <description>key-space</description>
+                <posx>240</posx>
+                <posy>165</posy>
+                <width>50</width>
+                <height>50</height>
+                <font>font8</font>
+                <align>center</align>
+                <texturefocus>search-input-small-focus.png</texturefocus>
+                <texturenofocus>search-input-small.png</texturenofocus>
+                <aspectratio>stretch</aspectratio>
+                <ondown>1210</ondown>
+                <onleft>1201</onleft>
+                <onright>1203</onright>
+            </control>
+            <control type="button" id="1203">
+                <description>key-clear</description>
+                <posx>310</posx>
+                <posy>165</posy>
+                <width>50</width>
+                <height>50</height>
+                <font>font8</font>
+                <align>center</align>
+                <texturefocus>search-input-small-focus.png</texturefocus>
+                <texturenofocus>search-input-small.png</texturenofocus>
+                <aspectratio>stretch</aspectratio>
+                <ondown>1210</ondown>
+                <onleft>1202</onleft>
+                <onright>1204</onright>
+            </control>
+            <control type="button" id="1204">
+                <description>key-backspace</description>
+                <posx>380</posx>
+                <posy>165</posy>
+                <width>50</width>
+                <height>50</height>
+                <font>font8</font>
+                <align>center</align>
+                <texturefocus>search-input-small-focus.png</texturefocus>
+                <texturenofocus>search-input-small.png</texturenofocus>
+                <aspectratio>stretch</aspectratio>
+                <ondown>1210</ondown>
+                <onleft>1203</onleft>
+                <onright>1205</onright>
+            </control>
+            <control type="button" id="1205">
+                <description>key-search</description>
+                <posx>450</posx>
+                <posy>165</posy>
+                <width>120</width>
+                <height>50</height>
+                <font>font8</font>
+                <align>center</align>
+                <texturefocus>search-input-meduim-focus.png</texturefocus>
+                <texturenofocus>search-input-meduim.png</texturenofocus>
+                <aspectratio>stretch</aspectratio>
+                <ondown>1210</ondown>
+                <onleft>1204</onleft>
+                <onright>1201</onright>
+            </control>
         </control>
         <control type="panel" id="1210">
             <description>key-input</description>
@@ -100,23 +117,24 @@
             <width>420</width>
             <height>420</height>
             <viewtype>list</viewtype>
-            <onup>-</onup>
+            <onleft>-</onleft>
+            <onup>1200</onup>
             <ondown>-</ondown>
-            <itemlayout width="250" height="180">
+            <itemlayout width="70" height="70">
                 <control type="image">
-                    <posx>10</posx>
-                    <posy>10</posy>
-                    <width>208</width>
-                    <height>117</height>        
-                    <info>ListItem.Icon</info>
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>50</width>
+                    <height>50</height>        
+                    <texture>search-input-small.png</texture>
                     <aspectratio>stretch</aspectratio>
                 </control>    
                 <control type="label">
-                    <posx>119</posx>
-                    <posy>120</posy>
-                    <width>208</width>
-                    <height>60</height>   
-                    <font>font16</font>
+                    <posx>25</posx>
+                    <posy>0</posy>
+                    <width>50</width>
+                    <height>50</height>   
+                    <font>font8</font>
                     <textcolor>white</textcolor>
                     <shadowcolor>80000000</shadowcolor>
                     <align>center</align>
@@ -124,29 +142,21 @@
                     <info>ListItem.Label</info>
                 </control>
             </itemlayout>
-            <focusedlayout width="250" height="180">
+            <focusedlayout width="70" height="70">
                 <control type="image">
-                    <posx>10</posx>
-                    <posy>10</posy>
-                    <width>208</width>
-                    <height>117</height>        
-                    <info>ListItem.Icon</info>
+                    <posx>0</posx>
+                    <posy>0</posy>
+                    <width>50</width>
+                    <height>50</height>        
+                    <texture>search-input-small-focus.png</texture>
                     <aspectratio>stretch</aspectratio>
-                </control>   
-                <control type="image">
-                    <posx>6</posx>
-                    <posy>6</posy>
-                    <width>216</width>
-                    <height>125</height>        
-                    <texture>border-other.png</texture>
-                    <aspectratio>stretch</aspectratio>
-                </control>     
+                </control>    
                 <control type="label">
-                    <posx>119</posx>
-                    <posy>120</posy>
-                    <width>208</width>
-                    <height>60</height>   
-                    <font>font16</font>
+                    <posx>25</posx>
+                    <posy>0</posy>
+                    <width>50</width>
+                    <height>50</height>   
+                    <font>font8</font>
                     <textcolor>ff0080ff</textcolor>
                     <shadowcolor>80000000</shadowcolor>
                     <align>center</align>
@@ -154,6 +164,28 @@
                     <info>ListItem.Label</info>
                 </control>
             </focusedlayout>
+        </control>
+        <control type="label" id="1211">
+            <posx>170</posx>
+            <posy>110</posy>
+            <width>400</width>
+            <height>40</height>
+            <font>font14</font>
+            <textcolor>white</textcolor>
+            <shadowcolor>80000000</shadowcolor>
+            <align>center</align>
+            <aligny>center</aligny>
+        </control>
+        <control type="label" id="1212">
+            <posx>570</posx>
+            <posy>110</posy>
+            <width>400</width>
+            <height>40</height>
+            <font>font14</font>
+            <textcolor>grey</textcolor>
+            <shadowcolor>80000000</shadowcolor>
+            <align>center</align>
+            <aligny>center</aligny>
         </control>
     </controls>
 </window>
