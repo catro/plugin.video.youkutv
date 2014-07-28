@@ -499,6 +499,95 @@ class OtherWindow(BaseWindow):
                 self.urlArgs['pg'] = str(pg)
                 self.updateContent()
                 self.getControl(920).selectItem(oldPos)
+                                                
+
+class SearchWindow(BaseWindow):
+    def __init__( self, *args, **kwargs):
+        self.subInited = False
+        self.conInited = False
+        BaseWindow.__init__(self, args, kwargs)
+
+        
+    def onInit(self):
+        BaseWindow.onInit(self)
+        self.initSubChannel()
+        #self.initContent()
+
+        
+    def initSubChannel(self):
+        if self.subInited:
+            return
+
+        self.getControl(1201).setLabel('中文')
+        self.getControl(1202).setLabel('空格')
+        self.getControl(1203).setLabel('清空')
+        self.getControl(1204).setLabel('退格')
+        self.getControl(1205).setLabel('搜索')
+
+        self.subInited = True
+
+
+    def initContent(self):
+        if self.conInited:
+            return
+
+        self.getControl(1020).reset()
+        if self.selectedNavigation == 0:
+            self.updateContent()
+            
+        self.conInited = True
+
+
+    def updateContent(self):
+        try:
+            ret = eval(cache.get('favor'))
+        except:
+            ret = None
+        if ret == None:
+            return
+        ret = sorted(ret.values(), lambda y,x: cmp(x['addedTime'], y['addedTime']))
+        for item in ret:
+            listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['img'])
+            setProperties(listitem, item)
+            self.getControl(1020).addItem(listitem)
+
+
+    def updateSelection(self):
+        if self.getFocusId() == 1010:
+            if self.selectedNavigation != self.getControl(1010).getSelectedPosition():
+                #Disable old selection
+                self.getControl(1010).getListItem(self.selectedNavigation).select(False)
+                #Enable new selection
+                self.selectedNavigation = self.getControl(1010).getSelectedPosition()
+                self.getControl(1010).getSelectedItem().select(True)
+        
+
+    def onClick( self, controlId ):
+        if controlId == 1010:
+            self.updateSelection()
+            self.conInited = False
+            self.initContent()
+            if self.getControl(1020).size() > 0:
+                self.setFocusId(1020)
+        elif controlId == 1020:
+            try:
+                retOld = cache.get('favor')
+            except:
+                retOld = None
+            showid = self.getControl(1020).getSelectedItem().getProperty('showid')
+            openWindow('detail', self.session, sdata=showid)
+            try:
+                ret = cache.get('favor')
+            except:
+                ret = None
+
+            if retOld != ret:
+                self.conInited = False
+                self.initContent()
+                self.setFocusId(1020)
+        else:
+            xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+ 
                                 
 
 class FavorWindow(BaseWindow):
@@ -1026,6 +1115,8 @@ def openWindow(window_name,session=None,**kwargs):
         w = FavorWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'history':
         w = HistoryWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+    elif window_name == 'search':
+        w = SearchWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     else:
         w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     w.doModal()            
@@ -1055,4 +1146,5 @@ def GetHttpData(url):
 
 
 if __name__ == '__main__':
-    openWindow('home')
+    #openWindow('home')
+    openWindow('search')
