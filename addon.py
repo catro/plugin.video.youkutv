@@ -94,17 +94,17 @@ class BaseWindow(xbmcgui.WindowXML):
         return True
 
 
-class HomeWindow(BaseWindow):
+class MainWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
         self.navInited = False
-        self.homeInited = False
+        self.mainInited = False
         self.channelInited = False
         BaseWindow.__init__(self, args, kwargs)
 
 
     def onInit(self):
         BaseWindow.onInit(self)
-        self.initHome()
+        self.initMain()
         self.initChannelTop()
         self.initNavigation()
 
@@ -127,8 +127,8 @@ class HomeWindow(BaseWindow):
         self.navInited = True
 
     
-    def initHome(self):
-        if self.homeInited:
+    def initMain(self):
+        if self.mainInited:
             return
 
         data = GetHttpData(HOST + 'tv/main?' + IDS)
@@ -167,7 +167,7 @@ class HomeWindow(BaseWindow):
             setProperties(listitem, item)
             self.getControl(528).addItem(listitem)
 
-        self.homeInited = True
+        self.mainInited = True
             
 
     def initChannelTop(self):
@@ -218,6 +218,8 @@ class HomeWindow(BaseWindow):
                 openWindow('favor', self.session)
             elif item.getProperty('mtype') == 'history':
                 openWindow('history', self.session)
+            elif item.getProperty('mtype') == 'search':
+                openWindow('search', self.session)
             else:
                 xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
@@ -360,7 +362,7 @@ class ChannelWindow(BaseWindow):
                 self.urlArgs['pg'] = str(pg)
                 self.updateContent()
                 self.getControl(620).selectItem(oldPos)
-                
+                                
 
 class OtherWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
@@ -501,6 +503,219 @@ class OtherWindow(BaseWindow):
                 self.getControl(920).selectItem(oldPos)
                                                 
 
+class ResultWindow(BaseWindow):
+    def __init__( self, *args, **kwargs):
+        self.filterInited = False
+        self.typeInited = False
+        self.conInited = False
+        self.showInited = False
+        self.selectAll = True
+        self.selectDuration = 0
+        self.selectOrder = 0
+        self.sdata = kwargs.get('sdata')
+        self.urlArgs = {'pz':'20', 'pg':'1', 'seconds':'0', 'seconds_end': '0', 'ob':'0'}
+        BaseWindow.__init__(self, args, kwargs)
+
+        
+    def onInit(self):
+        BaseWindow.onInit(self)
+        self.initType()
+        self.initFilter()
+        self.initContent()
+        self.initShow()
+
+        
+    def initType(self):
+        if self.typeInited:
+            return
+            
+        listitem = xbmcgui.ListItem(label='节目')
+        self.getControl(1304).addItem(listitem)
+        listitem = xbmcgui.ListItem(label='视频')
+        self.getControl(1304).addItem(listitem)
+        self.getControl(1304).getListItem(1).select(True)
+    
+        self.typeInited = True
+        
+        
+    def initFilter(self):
+        if self.filterInited:
+            return
+
+        #Title
+        self.getControl(1301).setLabel('搜索结果')
+        self.getControl(1302).setLabel('时长')
+        self.getControl(1303).setLabel('排序')
+
+        self.getControl(1310).reset()
+        listitem = xbmcgui.ListItem(label='全部结果')
+        self.getControl(1310).addItem(listitem)
+
+        #Catagory
+        data = GetHttpData(HOST + 'layout/android3_0/searchfilters?' + IDS)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return
+
+        for item in data['results']['duration']:
+            listitem = xbmcgui.ListItem(label=item['title'])
+            setProperties(listitem, item)
+            self.getControl(1311).addItem(listitem)
+
+        for item in data['results']['order']:
+            listitem = xbmcgui.ListItem(label=item['title'])
+            setProperties(listitem, item)
+            self.getControl(1312).addItem(listitem)
+
+        self.setFocusId(1310)
+        self.getControl(1310).getSelectedItem().select(True)
+        self.selectAll = True
+        self.selectDuration = 0
+        self.selectOrder = 0
+
+        self.filterInited = True
+
+
+    def initContent(self):
+        if self.conInited:
+            return
+
+        self.urlArgs['pg'] = '1'
+        self.getControl(1322).reset()
+        if self.getControl(1304).getListItem(0).isSelected():
+            self.getControl(1321).setVisible(True)
+            self.getControl(1322).setVisible(False)
+        else:
+            self.getControl(1321).setVisible(False)
+            self.getControl(1322).setVisible(True)
+        self.updateContent()
+            
+        self.conInited = True
+
+
+    def initShow(self):
+        if self.showInited:
+            return
+
+        url = HOST + 'layout/smarttv/showsearch?copyright_status=1&video_type=1&keyword=' + urllib.quote_plus(self.sdata) + '&' + IDS
+
+        data = GetHttpData(url)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return
+
+        for item in data['results']:
+            if item.has_key('show_vthumburl_hd'):
+                listitem = xbmcgui.ListItem(label=item['showname'], thumbnailImage=item['show_vthumburl_hd'])
+            else:
+                listitem = xbmcgui.ListItem(label=item['showname'], thumbnailImage=item['show_vthumburl'])
+            setProperties(listitem, item)
+            self.getControl(1321).addItem(listitem)
+
+        self.showInited = True
+
+
+    def updateContent(self):
+        url = HOST + 'openapi-wireless/videos/search/' + urllib.quote_plus(self.sdata) + '?' + IDS
+        for k in self.urlArgs:
+            url = url + '&' + k + '=' + urllib.quote_plus(self.urlArgs[k])
+
+        data = GetHttpData(url)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return
+
+        for item in data['results']:
+            if item.has_key('img_hd'):
+                listitem = xbmcgui.ListItem(label=item['title'], label2=item['duration'], thumbnailImage=item['img_hd'])
+            else:
+                listitem = xbmcgui.ListItem(label=item['title'], label2=item['duration'], thumbnailImage=item['img'])
+            setProperties(listitem, item)
+            self.getControl(1322).addItem(listitem)
+
+
+    def updateSelection(self, Id):
+        if Id == 1310:
+            self.getControl(1310).getSelectedItem().select(True)
+            self.getControl(1311).getListItem(self.selectDuration).select(False)
+            self.getControl(1312).getListItem(self.selectOrder).select(False)
+            self.selectAll = True
+            self.urlArgs['seconds'] = '0'
+            self.urlArgs['seconds_end'] = '0'
+            self.urlArgs['ob'] = '0'
+        elif Id == 1311:
+            self.getControl(1311).getListItem(self.selectDuration).select(False)
+            self.selectDuration = self.getControl(1311).getSelectedPosition()
+            self.getControl(1311).getListItem(self.selectDuration).select(True)
+            if self.selectAll == True:
+                self.selectAll = False
+                self.getControl(1310).getSelectedItem().select(False)
+            value = getProperty(self.getControl(1311).getListItem(self.selectDuration), "value")
+            try:
+                self.urlArgs['seconds'] = value.split('-')[0]
+                self.urlArgs['seconds_end'] = value.split('-')[1]
+            except:
+                pass
+        elif Id == 1312:
+            self.getControl(1312).getListItem(self.selectOrder).select(False)
+            self.selectOrder = self.getControl(1312).getSelectedPosition()
+            self.getControl(1312).getListItem(self.selectOrder).select(True)
+            if self.selectAll == True:
+                self.selectAll = False
+                self.getControl(1310).getSelectedItem().select(False)
+            self.urlArgs['ob'] = getProperty(self.getControl(1312).getListItem(self.selectOrder), "value")
+        
+
+    def onClick( self, controlId ):
+        if controlId == 1310 or controlId == 1311 or controlId == 1312:
+
+            self.updateSelection(controlId)
+
+            self.conInited = False
+            self.initContent()
+            self.setFocusId(1320)
+        elif controlId == 1304:
+            if self.getControl(1304).getSelectedPosition() == 0:
+                self.getControl(1304).getListItem(0).select(True)
+                self.getControl(1304).getListItem(1).select(False)
+            else:
+                self.getControl(1304).getListItem(0).select(False)
+                self.getControl(1304).getListItem(1).select(True)
+
+            if self.getControl(1304).getListItem(0).isSelected():
+                self.getControl(1321).setVisible(True)
+                self.getControl(1322).setVisible(False)
+            else:
+                self.getControl(1321).setVisible(False)
+                self.getControl(1322).setVisible(True)
+        elif controlId == 1321:
+            item = self.getControl(controlId).getSelectedItem()
+            openWindow('detail', self.session, sdata=item.getProperty('showid'))
+        elif controlId == 1322:
+            item = self.getControl(controlId).getSelectedItem()
+            play(item.getProperty('videoid'))
+        else:
+            xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+
+
+    def onAction(self, action):
+        BaseWindow.onAction(self, action)
+        if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 1322:
+            oldPos = self.getControl(1322).getSelectedPosition()
+            total = self.getControl(1322).size()
+            if total - oldPos <= 5:
+                pg = int(self.urlArgs['pg']) + 1
+                self.urlArgs['pg'] = str(pg)
+                self.updateContent()
+                self.getControl(1322).selectItem(oldPos)
+                                                
+
 class SearchWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
         self.subInited = False
@@ -544,38 +759,30 @@ class SearchWindow(BaseWindow):
             self.getControl(1212).setLabel('猜你想搜:')
             self.getControl(1211).setLabel(self.keywords)
 
-        return
-
-        self.getControl(1221).reset()
-        if self.selectedNavigation == 0:
-            self.updateContent()
+        self.getControl(1220).reset()
+        self.updateContent()
             
         self.conInited = True
 
 
     def updateContent(self):
-        try:
-            ret = eval(cache.get('favor'))
-        except:
-            ret = None
-        if ret == None:
+        if len(self.keywords) == 0:
+            data = GetHttpData(HOST + 'openapi-wireless/keywords/recommend?' + IDS)
+            title_key = 'title'
+        else:
+            data = GetHttpData(HOST + 'openapi-wireless/keywords/suggest?' + IDS + '&keywords=' + urllib.quote_plus(self.keywords))
+            title_key = 'keyword'
+
+        data = json.loads(data)
+        if not data['status']:
             return
-        ret = sorted(ret.values(), lambda y,x: cmp(x['addedTime'], y['addedTime']))
-        for item in ret:
-            listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['img'])
-            setProperties(listitem, item)
-            self.getControl(1020).addItem(listitem)
+        if data['status'] != 'success':
+            return
 
+        for item in data['results']:
+            listitem = xbmcgui.ListItem(label=item[title_key])
+            self.getControl(1220).addItem(listitem)
 
-    def updateSelection(self):
-        if self.getFocusId() == 1010:
-            if self.selectedNavigation != self.getControl(1010).getSelectedPosition():
-                #Disable old selection
-                self.getControl(1010).getListItem(self.selectedNavigation).select(False)
-                #Enable new selection
-                self.selectedNavigation = self.getControl(1010).getSelectedPosition()
-                self.getControl(1010).getSelectedItem().select(True)
-        
 
     def onClick( self, controlId ):
         if controlId == 1210:
@@ -589,31 +796,20 @@ class SearchWindow(BaseWindow):
             self.keywords = ''
         elif controlId == 1204:
             self.keywords = self.keywords[:-1]
-        elif controlId == 1020:
-            try:
-                retOld = cache.get('favor')
-            except:
-                retOld = None
-            showid = self.getControl(1020).getSelectedItem().getProperty('showid')
-            openWindow('detail', self.session, sdata=showid)
-            try:
-                ret = cache.get('favor')
-            except:
-                ret = None
-
-            if retOld != ret:
-                self.conInited = False
-                self.initContent()
-                self.setFocusId(1020)
+        elif controlId == 1205:
+            if len(self.keywords) == 0:
+                self.getControl(1211).setLabel('[COLOR=grey]搜索内容不能为空[/COLOR]')
+                return
+            else:
+                openWindow('result', self.session, sdata=self.keywords)
+        elif controlId == 1220:
+            openWindow('result', self.session, sdata=self.getControl(1220).getSelectedItem().getLabel())
         else:
             xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+            return
  
-        if len(self.keywords) == 0:
-            self.getControl(1212).setLabel('大家都在搜:')
-            self.getControl(1211).setLabel('[COLOR=grey]输入搜索内容[/COLOR]')
-        else:
-            self.getControl(1212).setLabel('猜你想搜:')
-            self.getControl(1211).setLabel(self.keywords)
+        self.conInited = False
+        self.initContent()
                                 
 
 class FavorWindow(BaseWindow):
@@ -1127,8 +1323,8 @@ def play(vid):
 
 def openWindow(window_name,session=None,**kwargs):
     windowFile = '%s.xml' % window_name
-    if window_name == 'home':
-        w = HomeWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+    if window_name == 'main':
+        w = MainWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'channel':
         w = ChannelWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'detail':
@@ -1143,6 +1339,8 @@ def openWindow(window_name,session=None,**kwargs):
         w = HistoryWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     elif window_name == 'search':
         w = SearchWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+    elif window_name == 'result':
+        w = ResultWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     else:
         w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
     w.doModal()            
@@ -1172,5 +1370,4 @@ def GetHttpData(url):
 
 
 if __name__ == '__main__':
-    #openWindow('home')
-    openWindow('search')
+    openWindow('main')
