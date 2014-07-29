@@ -260,6 +260,7 @@
             <height>240</height>
             <viewtype>list</viewtype>
             <orientation>horizontal</orientation>
+            <preloaditems>3</preloaditems>
             <onup>730</onup>
             <onleft>-</onleft>
             <onright>-</onright>

@@ -137,6 +137,7 @@ class MainWindow(BaseWindow):
             return
         if data['status'] != 'success':
             return
+
         for item in data['results']['m1']:
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['image'])
             setProperties(listitem, item)
@@ -1349,23 +1350,29 @@ def openWindow(window_name,session=None,**kwargs):
 
 def GetHttpData(url):
     print ('Frech: ' + url)
-    req = urllib2.Request(url)
-    req.add_header('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) {0}{1}'.
-                   format('AppleWebKit/537.36 (KHTML, like Gecko) ',
-                          'Chrome/28.0.1500.71 Safari/537.36'))
-    req.add_header('Accept-encoding', 'gzip')
-    response = urllib2.urlopen(req)
-    httpdata = response.read()
-    if response.headers.get('content-encoding', None) == 'gzip':
-        httpdata = gzip.GzipFile(fileobj=StringIO.StringIO(httpdata)).read()
-    response.close()
-    match = re.compile('encodingt=(.+?)"').findall(httpdata)
-    if len(match)<=0:
-        match = re.compile('meta charset="(.+?)"').findall(httpdata)
-    if len(match)>0:
-        charset = match[0].lower()
-        if (charset != 'utf-8') and (charset != 'utf8'):
-            httpdata = unicode(httpdata, charset).encode('utf8')
+    xbmc.executebuiltin("ActivateWindow(busydialog)")
+    try:
+        req = urllib2.Request(url)
+        req.add_header('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) {0}{1}'.
+                       format('AppleWebKit/537.36 (KHTML, like Gecko) ',
+                              'Chrome/28.0.1500.71 Safari/537.36'))
+        req.add_header('Accept-encoding', 'gzip')
+        response = urllib2.urlopen(req)
+        httpdata = response.read()
+        if response.headers.get('content-encoding', None) == 'gzip':
+            httpdata = gzip.GzipFile(fileobj=StringIO.StringIO(httpdata)).read()
+        response.close()
+        match = re.compile('encodingt=(.+?)"').findall(httpdata)
+        if len(match)<=0:
+            match = re.compile('meta charset="(.+?)"').findall(httpdata)
+        if len(match)>0:
+            charset = match[0].lower()
+            if (charset != 'utf-8') and (charset != 'utf8'):
+                httpdata = unicode(httpdata, charset).encode('utf8')
+    except:
+        httpdata = '{"status": "Fail"}'
+
+    xbmc.executebuiltin( "Dialog.Close(busydialog)" )
     return httpdata
 
 

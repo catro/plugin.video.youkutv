@@ -42,6 +42,7 @@
             <height>540</height>
             <viewtype>list</viewtype>
             <onleft>910</onleft>
+            <preloaditems>10</preloaditems>
             <onup>-</onup>
             <ondown>-</ondown>
             <itemlayout width="250" height="180">

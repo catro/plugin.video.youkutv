@@ -271,6 +271,7 @@
                 <onleft>1313</onleft>
                 <onup>1304</onup>
                 <ondown>-</ondown>
+                <preloaditems>10</preloaditems>
                 <itemlayout width="180" height="300">
                     <control type="image">
                         <posx>10</posx>
@@ -356,6 +357,7 @@
                 <onleft>1313</onleft>
                 <onup>1304</onup>
                 <ondown>-</ondown>
+                <preloaditems>10</preloaditems>
                 <itemlayout width="250" height="180">
                     <control type="image">
                         <posx>10</posx>

@@ -170,6 +170,7 @@
             <viewtype>list</viewtype>
             <onleft>910</onleft>
             <onup>903</onup>
+            <preloaditems>10</preloaditems>
             <ondown>-</ondown>
             <itemlayout width="250" height="180">
                 <control type="image">

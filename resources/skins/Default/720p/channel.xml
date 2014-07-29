@@ -113,6 +113,7 @@
             <height>600</height>
             <viewtype>list</viewtype>
             <onleft>610</onleft>
+            <preloaditems>10</preloaditems>
             <onup>-</onup>
             <ondown>-</ondown>
             <itemlayout width="180" height="300">
