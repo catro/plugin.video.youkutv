@@ -355,10 +355,11 @@ class ChannelWindow(BaseWindow):
 
     def onAction(self, action):
         BaseWindow.onAction(self, action)
-        if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 620:
+        #if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 620:
+        if self.getFocusId() == 620:
             oldPos = self.getControl(620).getSelectedPosition()
             total = self.getControl(620).size()
-            if total - oldPos <= 5:
+            if total - oldPos <= 10:
                 pg = int(self.urlArgs['pg']) + 1
                 self.urlArgs['pg'] = str(pg)
                 self.updateContent()
@@ -494,10 +495,11 @@ class OtherWindow(BaseWindow):
 
     def onAction(self, action):
         BaseWindow.onAction(self, action)
-        if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 920:
+        #if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 920:
+        if self.getFocusId() == 920:
             oldPos = self.getControl(920).getSelectedPosition()
             total = self.getControl(920).size()
-            if total - oldPos <= 5:
+            if total - oldPos <= 10:
                 pg = int(self.urlArgs['pg']) + 1
                 self.urlArgs['pg'] = str(pg)
                 self.updateContent()
@@ -707,10 +709,11 @@ class ResultWindow(BaseWindow):
 
     def onAction(self, action):
         BaseWindow.onAction(self, action)
-        if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 1322:
+        #if action.getId() == ACTION_MOVE_DOWN and self.getFocusId() == 1322:
+        if self.getFocusId() == 1322:
             oldPos = self.getControl(1322).getSelectedPosition()
             total = self.getControl(1322).size()
-            if total - oldPos <= 5:
+            if total - oldPos <= 10:
                 pg = int(self.urlArgs['pg']) + 1
                 self.urlArgs['pg'] = str(pg)
                 self.updateContent()
