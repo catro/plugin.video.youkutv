@@ -1328,25 +1328,25 @@ def play(vid):
 def openWindow(window_name,session=None,**kwargs):
     windowFile = '%s.xml' % window_name
     if window_name == 'main':
-        w = MainWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = MainWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'channel':
-        w = ChannelWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = ChannelWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'detail':
-        w = DetailWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = DetailWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'select':
-        w = SelectWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = SelectWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'other':
-        w = OtherWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = OtherWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'favor':
-        w = FavorWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = FavorWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'history':
-        w = HistoryWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = HistoryWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'search':
-        w = SearchWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = SearchWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'result':
-        w = ResultWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = ResultWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     else:
-        w = BaseWindow(windowFile , xbmc.translatePath(__addon__.getAddonInfo('path')), "Default",session=session,**kwargs)
+        w = BaseWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     w.doModal()            
     del w
 
