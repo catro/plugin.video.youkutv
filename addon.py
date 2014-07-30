@@ -2,7 +2,7 @@
 # default.py
 
 import xbmcgui, xbmcaddon, xbmc
-import json, sys, urllib, urllib2, gzip, StringIO, re, os, time
+import json, sys, urllib, urllib2, gzip, StringIO, re, os, time, threading
 try:
    import StorageServer
 except:
@@ -52,6 +52,79 @@ ACTION_MOUSE_MOVE     = 107
 ACTION_CONTEXT_MENU   = 117
 
 
+class MyPlayer(xbmc.Player):
+    def __init__(self):
+        self.myHistory = None
+        self.myItem = ''
+        xbmc.Player.__init__(self)
+
+    def play(self, item='', listitem=None, windowed=False, startpos=-1, arg=None):
+
+        self.myHistory = arg
+        self.myItem = item
+
+        if arg.has_key('chapter'):
+            startpos = arg['chapter']
+        try:
+            offset = arg['offset']
+            item[startpos].setProperty('StartOffset', str(offset))
+        except:
+            pass
+
+        t = threading.Timer(0.5, self.timeEntry)
+        t.start()
+
+        xbmc.Player.play(self, item, listitem, windowed, startpos)
+
+    def timeEntry(self):
+        self.updateHistory()
+
+        try:
+            if self.isPlaying():
+                t = threading.Timer(0.5, self.timeEntry)
+                t.start()
+        except:
+            pass
+
+    def onPlayBackStopped(self):
+        if self.myHistory['offset'] < 5:
+            del(self.myHistory['offset'])
+        vid = self.myHistory['vid']
+        try:
+            ret = eval(cache.get('history'))
+        except:
+            ret = {}
+
+        #Add to history
+        self.myHistory['addedTime'] = time.time()
+        ret[vid] = self.myHistory
+        cache.set('history', repr(ret))
+        xbmc.Player.onPlayBackStopped(self)
+
+    def onPlayBackStarted(self):
+        self.updateHistory()
+        xbmc.Player.onPlayBackStarted(self)
+
+    def onPlayBackSeek(self, time, seekOffset):
+        self.updateHistory()
+        xbmc.Player.onPlayBackSeek(self, time, seekOffset)
+
+    def onPlayBackSeekChapter(self, chapter):
+        self.updateHistory()
+        xbmc.Player.onPlayBackSeek(self, chapter)
+
+    def updateHistory(self):
+        try:
+            self.myHistory['offset'] = self.getTime()
+            self.myHistory['chapter'] = self.myItem.getposition()
+            print 'Update history: ' + str(self.myHistory['chapter']) + ', ' + str(self.myHistory['offset'])
+        except:
+            pass
+
+
+player = MyPlayer()
+
+
 class BaseWindow(xbmcgui.WindowXML):
     def __init__( self, *args, **kwargs):
         self.session = None
@@ -64,6 +137,8 @@ class BaseWindow(xbmcgui.WindowXML):
         self.close()
         
     def onInit(self):
+        if player.isPlaying():
+            player.stop()
         if self.session:
             self.session.window = self
         else:
@@ -86,8 +161,8 @@ class BaseWindow(xbmcgui.WindowXML):
         
     def onAction(self,action):
         if action.getId() == ACTION_PARENT_DIR or action.getId() == ACTION_PREVIOUS_MENU:
-            if xbmc.Player().isPlaying():
-                xbmc.Player().stop()
+            if player.isPlaying():
+                player.stop()
             self.doClose()
         else:
             return False
@@ -1375,7 +1450,16 @@ def play(vid):
             listitem=xbmcgui.ListItem()
             listitem.setInfo(type="Video",infoLabels={"Title":movdat['title']})
             xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-            xbmc.Player().play(playurl, listitem)
+            try:
+                ret = eval(cache.get('history'))
+                if ret.has_key(vid):
+                    history = ret[vid] 
+                else:
+                    history = {}
+            except:
+                ret = {}
+                history = {'title': movdat['title'], 'vid': vid, 'logo': movdat['logo']}
+            player.play(playurl, listitem)
         else:
             #Get url from www.flvcd.com
             flvcdurl='http://www.flvcd.com/parse.php?format=super&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+vid+'.html')
@@ -1392,34 +1476,25 @@ def play(vid):
                 listitem.setInfo(type="Video",infoLabels={"Title":title})
                 playlist.add(foobars[i], listitem)
             xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-            xbmc.Player().play(playlist)
+            try:
+                ret = eval(cache.get('history'))
+                if ret.has_key(vid):
+                    history = ret[vid] 
+                else:
+                    history = {'title': movdat['title'], 'vid': vid, 'logo': movdat['logo']}
+            except:
+                ret = {}
+                history = {'title': movdat['title'], 'vid': vid, 'logo': movdat['logo']}
+            player.play(playlist, arg=history)
     except:
         xbmc.executebuiltin( "Dialog.Close(busydialog)" )
         xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
         return
 
     #Add to history
-    data = {'addedTime': time.time(), \
-            'title': movdat['title'], \
-            'vid': vid, \
-            'logo': movdat['logo']}
-    try:
-        ret = eval(cache.get('history'))
-    except:
-        ret = None
-    if ret == None:
-        cache.set('history', repr({vid: data}))
-    elif ret.has_key(vid):
-        old = ret[vid]
-        for key in old.keys():
-            if data.has_key(key) == False:
-                data[key] = old[key]
-        ret[vid] = data
-        cache.set('history', repr(ret))
-    else:
-        ret[vid] = data
-        cache.set('history', repr(ret))
-
+    history['addedTime'] = time.time()
+    ret[vid] = history
+    cache.set('history', repr(ret))
 
 def openWindow(window_name,session=None,**kwargs):
     windowFile = '%s.xml' % window_name
