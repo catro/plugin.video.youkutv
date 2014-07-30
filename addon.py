@@ -56,6 +56,7 @@ class BaseWindow(xbmcgui.WindowXML):
     def __init__( self, *args, **kwargs):
         self.session = None
         self.oldWindow = None
+        self.busyCount = 0
         xbmcgui.WindowXML.__init__( self )
 
     def doClose(self):
@@ -91,6 +92,20 @@ class BaseWindow(xbmcgui.WindowXML):
         else:
             return False
 
+    def showBusy(self):
+        if self.busyCount > 0:
+            self.busyCount += 1
+        else:
+            self.busyCount = 1
+            xbmc.executebuiltin("ActivateWindow(busydialog)")
+
+
+    def hideBusy(self):
+        if self.busyCount > 0:
+            self.busyCount -= 1
+        if self.busyCount == 0:
+            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
+
         return True
 
 
@@ -104,9 +119,14 @@ class MainWindow(BaseWindow):
 
     def onInit(self):
         BaseWindow.onInit(self)
+
+        self.showBusy()
+        
         self.initMain()
         self.initChannelTop()
         self.initNavigation()
+
+        self.hideBusy()
 
 
     def initNavigation(self):
@@ -258,8 +278,13 @@ class ChannelWindow(BaseWindow):
         
     def onInit(self):
         BaseWindow.onInit(self)
+
+        self.showBusy()
+
         self.initSubChannel()
         self.initContent()
+
+        self.hideBusy()
 
         
     def initSubChannel(self):
@@ -308,6 +333,8 @@ class ChannelWindow(BaseWindow):
 
 
     def updateContent(self):
+        self.showBusy()
+
         url = HOST + 'layout/smarttv/item_list?' + IDS + '&cid=' + self.sdata
         for k in self.urlArgs:
             url = url + '&' + k + '=' + urllib.quote_plus(self.urlArgs[k])
@@ -315,14 +342,18 @@ class ChannelWindow(BaseWindow):
         data = GetHttpData(url)
         data = json.loads(data)
         if not data['status']:
+            self.hideBusy()
             return
         if data['status'] != 'success':
+            self.hideBusy()
             return
 
         for item in data['results']:
             listitem = xbmcgui.ListItem(label=item['showname'], label2=item['stripe_bottom'], thumbnailImage=item['show_vthumburl_hd'])
             setProperties(listitem, item)
             self.getControl(620).addItem(listitem)
+
+        self.hideBusy()
 
 
     def updateSelection(self):
@@ -377,9 +408,14 @@ class OtherWindow(BaseWindow):
         
     def onInit(self):
         BaseWindow.onInit(self)
+
+        self.showBusy()
+
         self.initType()
         self.initSubChannel()
         self.initContent()
+
+        self.hideBusy()
 
         
     def initType(self):
@@ -436,6 +472,8 @@ class OtherWindow(BaseWindow):
 
 
     def updateContent(self):
+        self.showBusy()
+
         url = HOST + 'layout/smarttv/item_list?' + IDS
         for k in self.urlArgs:
             url = url + '&' + k + '=' + urllib.quote_plus(self.urlArgs[k])
@@ -443,8 +481,10 @@ class OtherWindow(BaseWindow):
         data = GetHttpData(url)
         data = json.loads(data)
         if not data['status']:
+            self.hideBusy()
             return
         if data['status'] != 'success':
+            self.hideBusy()
             return
 
         for item in data['results']:
@@ -454,6 +494,8 @@ class OtherWindow(BaseWindow):
                 listitem = xbmcgui.ListItem(label=item['showname'], label2=item['duration'], thumbnailImage=item['show_thumburl'])
             setProperties(listitem, item)
             self.getControl(920).addItem(listitem)
+
+        self.hideBusy()
 
 
     def updateSelection(self):
@@ -522,10 +564,15 @@ class ResultWindow(BaseWindow):
         
     def onInit(self):
         BaseWindow.onInit(self)
+
+        self.showBusy()
+
         self.initType()
         self.initFilter()
         self.initContent()
         self.initShow()
+
+        self.hideBusy()
 
         
     def initType(self):
@@ -623,6 +670,8 @@ class ResultWindow(BaseWindow):
 
 
     def updateContent(self):
+        self.showBusy()
+
         url = HOST + 'openapi-wireless/videos/search/' + urllib.quote_plus(self.sdata) + '?' + IDS
         for k in self.urlArgs:
             url = url + '&' + k + '=' + urllib.quote_plus(self.urlArgs[k])
@@ -630,8 +679,10 @@ class ResultWindow(BaseWindow):
         data = GetHttpData(url)
         data = json.loads(data)
         if not data['status']:
+            self.hideBusy()
             return
         if data['status'] != 'success':
+            self.hideBusy()
             return
 
         for item in data['results']:
@@ -641,6 +692,8 @@ class ResultWindow(BaseWindow):
                 listitem = xbmcgui.ListItem(label=item['title'], label2=item['duration'], thumbnailImage=item['img'])
             setProperties(listitem, item)
             self.getControl(1322).addItem(listitem)
+
+        self.hideBusy()
 
 
     def updateSelection(self, Id):
@@ -770,6 +823,8 @@ class SearchWindow(BaseWindow):
 
 
     def updateContent(self):
+        self.showBusy()
+
         if len(self.keywords) == 0:
             data = GetHttpData(HOST + 'openapi-wireless/keywords/recommend?' + IDS)
             title_key = 'title'
@@ -779,13 +834,17 @@ class SearchWindow(BaseWindow):
 
         data = json.loads(data)
         if not data['status']:
+            self.hideBusy()
             return
         if data['status'] != 'success':
+            self.hideBusy()
             return
 
         for item in data['results']:
             listitem = xbmcgui.ListItem(label=item[title_key])
             self.getControl(1220).addItem(listitem)
+
+        self.hideBusy()
 
 
     def onClick( self, controlId ):
@@ -984,11 +1043,15 @@ class DetailWindow(BaseWindow):
         if self.inited:
             return
 
+        self.showBusy()
+
         data = GetHttpData(HOST + 'layout/smarttv/play/detail?' + IDS + '&id=' + self.sdata)
         data = json.loads(data)
         if not data['status']:
+            self.hideBusy()
             return
         if data['status'] != 'success':
+            self.hideBusy()
             return            
         
         data = data['detail']
@@ -1033,14 +1096,18 @@ class DetailWindow(BaseWindow):
         data = GetHttpData(HOST + 'common/shows/relate?' + IDS + '&id=' + self.sdata)
         data = json.loads(data)
         if not data['status']:
+            self.hideBusy()
             return
         if data['status'] != 'success':
+            self.hideBusy()
             return            
 
         for item in data['results']:
             listitem = xbmcgui.ListItem(label=item['showname'], thumbnailImage=item['show_vthumburl'])
             setProperties(listitem, item)
             self.getControl(740).addItem(listitem)
+
+        self.hideBusy()
 
         self.inited = True
         
@@ -1105,7 +1172,10 @@ class SelectWindow(xbmcgui.WindowXMLDialog):
             except:
                 self.close()
         self.setSessionWindow()
+
+        xbmc.executebuiltin("ActivateWindow(busydialog)")
         self.init()
+        xbmc.executebuiltin( "Dialog.Close(busydialog)" )
         
         
     def onFocus( self, controlId ):
@@ -1285,6 +1355,7 @@ def getProperty(item, key):
 
 def play(vid):
     try:
+        xbmc.executebuiltin("ActivateWindow(busydialog)")
         stypes = ['hd2', 'mp4', 'flv']
         moviesurl="http://v.youku.com/player/getPlayList/VideoIDS/{0}/ctype/12/ev/1".format(vid)
         result = GetHttpData(moviesurl)
@@ -1297,12 +1368,33 @@ def play(vid):
         if len(streamfids) > 1:
             selstypes = [v for v in stypes if v in streamfids]
             stype = selstypes[0]
-        
-        playurl = r'http://v.youku.com/player/getM3U8/vid/' + vid + r'/type/' + stype + '/video.m3u8'
-        listitem=xbmcgui.ListItem()
-        listitem.setInfo(type="Video",infoLabels={"Title":movdat['title']})
-        xbmc.Player().play(playurl, listitem)
+
+        if False:
+            #Use m3u8 url
+            playurl = r'http://v.youku.com/player/getM3U8/vid/' + vid + r'/type/' + stype + '/video.m3u8'
+            listitem=xbmcgui.ListItem()
+            listitem.setInfo(type="Video",infoLabels={"Title":movdat['title']})
+            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
+            xbmc.Player().play(playurl, listitem)
+        else:
+            #Get url from www.flvcd.com
+            flvcdurl='http://www.flvcd.com/parse.php?format=super&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+vid+'.html')
+            result = GetHttpData(flvcdurl)
+            foobars = re.compile('(http://k.youku.com/.*)"\starget', re.M).findall(result)
+            if len(foobars) < 1:
+                xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
+                return
+            playlist = xbmc.PlayList(1)
+            playlist.clear()
+            for i in range(0,len(foobars)):
+                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(len(foobars)) + u"节"
+                listitem=xbmcgui.ListItem(title)
+                listitem.setInfo(type="Video",infoLabels={"Title":title})
+                playlist.add(foobars[i], listitem)
+            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
+            xbmc.Player().play(playlist)
     except:
+        xbmc.executebuiltin( "Dialog.Close(busydialog)" )
         xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
         return
 
@@ -1318,6 +1410,10 @@ def play(vid):
     if ret == None:
         cache.set('history', repr({vid: data}))
     elif ret.has_key(vid):
+        old = ret[vid]
+        for key in old.keys():
+            if data.has_key(key) == False:
+                data[key] = old[key]
         ret[vid] = data
         cache.set('history', repr(ret))
     else:
@@ -1353,7 +1449,6 @@ def openWindow(window_name,session=None,**kwargs):
 
 def GetHttpData(url):
     print ('Frech: ' + url)
-    xbmc.executebuiltin("ActivateWindow(busydialog)")
     try:
         req = urllib2.Request(url)
         req.add_header('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) {0}{1}'.
@@ -1375,7 +1470,6 @@ def GetHttpData(url):
     except:
         httpdata = '{"status": "Fail"}'
 
-    xbmc.executebuiltin( "Dialog.Close(busydialog)" )
     return httpdata
 
 
