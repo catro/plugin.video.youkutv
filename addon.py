@@ -117,7 +117,6 @@ class MyPlayer(xbmc.Player):
         try:
             self.myHistory['offset'] = self.getTime()
             self.myHistory['chapter'] = self.myItem.getposition()
-            print 'Update history: ' + str(self.myHistory['chapter']) + ', ' + str(self.myHistory['offset'])
         except:
             pass
 
@@ -1095,10 +1094,20 @@ class HistoryWindow(BaseWindow):
 
 
     def onClick( self, controlId ):
+        try:
+            oldret = eval(cache.get('history'))
+        except:
+            oldret = None
         play(self.getControl(1110).getSelectedItem().getLabel2())
-        self.conInited = False
-        self.initContent()
-        self.setFocusId(1110)
+        try:
+            ret = eval(cache.get('history'))
+        except:
+            ret = None
+
+        if retOld != ret:
+            self.conInited = False
+            self.initContent()
+            self.setFocusId(1110)
 
             
 class DetailWindow(BaseWindow):
@@ -1485,6 +1494,20 @@ def play(vid):
             except:
                 ret = {}
                 history = {'title': movdat['title'], 'vid': vid, 'logo': movdat['logo']}
+
+            if history.has_key('chapter'):
+                if history['chapter'] != 0 or history.has_key('offset'):
+                    choice = xbmcgui.Dialog().select('选择播放', ['继续上一次播放', '从头开始播放'])
+                    print 'choice: ' + str(choice)
+                    if choice == 1:
+                        try:
+                            del(history['chapter'])
+                            del(history['offset'])
+                        except:
+                            pass
+                    elif choice == -1:
+                        return
+                        
             player.play(playlist, arg=history)
     except:
         xbmc.executebuiltin( "Dialog.Close(busydialog)" )
