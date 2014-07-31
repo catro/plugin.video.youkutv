@@ -125,13 +125,12 @@ class MyPlayer(xbmc.Player):
 player = MyPlayer()
 
 
-class ConfirmWindow(xbmcgui.WindowXMLDialog):
+class BaseWindowDialog(xbmcgui.WindowXMLDialog):
     def __init__( self, *args, **kwargs):
-        self.selected = -1
         self.session = None
         self.oldWindow = None
         self.busyCount = 0
-        xbmcgui.WindowXMLDialog.__init__( self )
+        xbmcgui.WindowXML.__init__( self )
 
     def doClose(self):
         self.session.window = self.oldWindow
@@ -149,7 +148,6 @@ class ConfirmWindow(xbmcgui.WindowXMLDialog):
                 self.close()
         self.setSessionWindow()
         
-        
     def onFocus( self, controlId ):
         self.controlId = controlId
         
@@ -159,7 +157,6 @@ class ConfirmWindow(xbmcgui.WindowXMLDialog):
         except:
             self.oldWindow=self
         self.session.window = self
-
         
     def onAction(self,action):
         if action.getId() == ACTION_PARENT_DIR or action.getId() == ACTION_PREVIOUS_MENU:
@@ -171,13 +168,77 @@ class ConfirmWindow(xbmcgui.WindowXMLDialog):
 
         return True
 
+    def showBusy(self):
+        if self.busyCount > 0:
+            self.busyCount += 1
+        else:
+            self.busyCount = 1
+            xbmc.executebuiltin("ActivateWindow(busydialog)")
+
+
+    def hideBusy(self):
+        if self.busyCount > 0:
+            self.busyCount -= 1
+        if self.busyCount == 0:
+            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
+
+
+class ConfirmWindow(BaseWindowDialog):
+    def __init__( self, *args, **kwargs):
+        self.selected = -1
+        BaseWindowDialog.__init__( self )
+
     def onClick( self, controlId ):
+        BaseWindowDialog.onClick(self, controlId)
         if (controlId == 1410):
             self.selected = 0
             self.doClose()
         elif (controlId == 1411):
             self.selected = 1
             self.doClose()
+
+    def select(self):
+        self.doModal()
+        return self.selected
+    
+
+class FilterWindow(BaseWindowDialog):
+    def __init__( self, *args, **kwargs):
+        self.inited = False
+        self.selected = {}
+        self.sdata = kwargs.get('sdata')
+        BaseWindowDialog.__init__( self )
+
+        
+    def onInit(self):
+        self.showBusy()
+
+        BaseWindowDialog.onInit(self)
+        self.init()
+
+        self.hideBusy()
+
+    def init(self):
+        if self.inited:
+            return
+
+        data = GetHttpData(HOST + 'layout/smarttv/filter_order?' + IDS + '&cid=' + self.sdata + '&type=show')
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return            
+
+        i = 0
+        for result in data['results']:
+            cl = self.getControl(1621)
+            for item in result['items']:
+                listitem = xbmcgui.ListItem(label=item['title'], label2=item['value'])
+                cl.addItem(listitem)
+            self.getControl(1620).addItem(cl)
+
+        
+        self.inited = True
 
     def select(self):
         self.doModal()
@@ -1400,48 +1461,21 @@ class DetailWindow(BaseWindow):
             self.getControl(722).setLabel('已收藏')
             
             
-class SelectWindow(xbmcgui.WindowXMLDialog):
+class SelectWindow(BaseWindowDialog):
     def __init__( self, *args, **kwargs):
         self.inited = False
         self.sdata = kwargs.get('sdata')
         self.pdata = None
         self.selected = 0
-        self.session = None
-        self.oldWindow = None
-        xbmcgui.WindowXML.__init__( self )
-        
-
-    def doClose(self):
-        self.session.window = self.oldWindow
-        self.close()
-
+        BaseWindowDialog.__init__( self )
+       
         
     def onInit(self):
-        if self.session:
-            self.session.window = self
-        else:
-            try:
-                self.session = VstSession(self)
-            except:
-                self.close()
-        self.setSessionWindow()
+        BaseWindowDialog.onInit( self )
 
         xbmc.executebuiltin("ActivateWindow(busydialog)")
         self.init()
         xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-        
-        
-    def onFocus( self, controlId ):
-        self.controlId = controlId
-        
-        
-    def setSessionWindow(self):
-        try:
-            self.oldWindow = self.session.window
-        except:
-            self.oldWindow=self
-        self.session.window = self        
-
         
     def init(self):
         if self.inited:
@@ -1511,6 +1545,7 @@ class SelectWindow(xbmcgui.WindowXMLDialog):
         
 
     def onClick( self, controlId ):
+        BaseWindowDialog.onClick(self, controlId)
         if controlId == 810:
             self.selectRange(self.getControl(810).getSelectedPosition())
         else:
@@ -1519,9 +1554,8 @@ class SelectWindow(xbmcgui.WindowXMLDialog):
 
 
     def onAction(self, action):
-        if action.getId() == ACTION_PARENT_DIR or action.getId() == ACTION_PREVIOUS_MENU:
-            self.doClose()
-        elif self.getFocusId() == 810:
+        BaseWindowDialog.onAction(self, action)
+        if self.getFocusId() == 810:
             if action.getId() == ACTION_MOVE_LEFT or action.getId() == ACTION_MOVE_RIGHT:
                 self.selectRange(self.getControl(810).getSelectedPosition())
 
@@ -1710,6 +1744,11 @@ def openWindow(window_name,session=None,**kwargs):
         w = ResultWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'top':
         w = TopWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
+    elif window_name == 'filter':
+        w = FilterWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
+        ret = w.select()
+        del w
+        return ret
     elif window_name == 'confirm':
         w = ConfirmWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
         ret = w.select()
@@ -1749,3 +1788,4 @@ def GetHttpData(url):
 
 if __name__ == '__main__':
     openWindow('main')
+    #openWindow('filter', sdata='669')
