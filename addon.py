@@ -19,6 +19,7 @@ HOST='http://tv.api.3g.youku.com/'
 IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39cab341ead7b2aa90f9caf&ver=2.3.0'
 Navigation=['首页', '频道', '排行']
 ContentID=[520, 560, 580]
+TopData=['播放排行榜', '搜索排行榜', '特色排行榜']
 ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
              '669': {'icon': 'channel_child_icon.png', 'title': '少儿'},\
              '96': {'icon': 'channel_movie_icon.png', 'title': '电影'},\
@@ -374,6 +375,8 @@ class MainWindow(BaseWindow):
                 openWindow('history', self.session)
             elif item.getProperty('mtype') == 'search':
                 openWindow('search', self.session)
+            elif item.getProperty('mtype') == 'top':
+                openWindow('top', self.session, sdata=item.getProperty('top_id'))
             else:
                 xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
@@ -398,6 +401,113 @@ class MainWindow(BaseWindow):
                 self.getControl(ContentID[self.selectedNavigation]).setEnabled(True)
                 self.getControl(ContentID[self.selectedNavigation]).setVisible(True)
                 self.getControl(510).getSelectedItem().select(True)
+                
+
+class TopWindow(BaseWindow):
+    def __init__( self, *args, **kwargs):
+        self.subInited = False
+        self.conInited = False
+        self.urlArgs = {'menu_id':'1', 'pl':'50'}
+        self.sdata = kwargs.get('sdata')
+        BaseWindow.__init__(self, args, kwargs)
+
+        
+    def onInit(self):
+        BaseWindow.onInit(self)
+
+        self.showBusy()
+
+        self.initSubChannel()
+        self.initContent()
+
+        self.hideBusy()
+
+        
+    def initSubChannel(self):
+        if self.subInited:
+            return
+
+        #Title
+        self.getControl(1502).setLabel(TopData[int(self.sdata) - 1])
+
+        #Catagory
+        data = GetHttpData(HOST + 'tv/top/menu?' + IDS + '&top_id=' + self.sdata)
+        data = json.loads(data)
+        if not data['status']:
+            return
+        if data['status'] != 'success':
+            return
+
+        for item in data['results']:
+            listitem = xbmcgui.ListItem(label=item['title'])
+            setProperties(listitem, item)
+            self.getControl(1510).addItem(listitem)
+
+        self.selectedNavigation = 0
+        self.getControl(1510).getListItem(0).select(True)
+        self.setFocusId(1510)
+
+        self.subInited = True
+
+
+    def initContent(self):
+        if self.conInited:
+            return
+
+        self.getControl(1520).reset()
+        self.updateContent()
+            
+        self.conInited = True
+
+
+    def updateContent(self):
+        self.showBusy()
+
+        url = HOST + 'tv/top/shows?' + IDS + '&top_id=' + self.sdata
+        for k in self.urlArgs:
+            url = url + '&' + k + '=' + urllib.quote_plus(self.urlArgs[k])
+
+        data = GetHttpData(url)
+        data = json.loads(data)
+        if not data['status']:
+            self.hideBusy()
+            return
+        if data['status'] != 'success':
+            self.hideBusy()
+            return
+
+        for item in data['results']:
+            listitem = xbmcgui.ListItem(label=item['showname'], thumbnailImage=item['show_vthumburl_hd'])
+            setProperties(listitem, item)
+            self.getControl(1520).addItem(listitem)
+
+        self.hideBusy()
+
+
+    def updateSelection(self):
+        if self.getFocusId() == 1510:
+            if self.selectedNavigation != self.getControl(1510).getSelectedPosition():
+                #Disable old selection
+                self.getControl(1510).getListItem(self.selectedNavigation).select(False)
+                #Enable new selection
+                self.selectedNavigation = self.getControl(1510).getSelectedPosition()
+                self.getControl(1510).getSelectedItem().select(True)
+        
+
+    def onClick( self, controlId ):
+        if controlId == 1510:
+            self.urlArgs['menu_id'] = getProperty(self.getControl(1510).getSelectedItem(), 'menu_id')
+
+            self.updateSelection()
+
+            self.conInited = False
+            self.initContent()
+            self.setFocusId(1520)
+        elif controlId == 1520:
+            item = self.getControl(controlId).getSelectedItem()
+            openWindow('detail', self.session, sdata=item.getProperty('showid'))
+        else:
+            xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
 
 class ChannelWindow(BaseWindow):
@@ -1598,6 +1708,8 @@ def openWindow(window_name,session=None,**kwargs):
         w = SearchWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'result':
         w = ResultWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
+    elif window_name == 'top':
+        w = TopWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'confirm':
         w = ConfirmWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
         ret = w.select()
