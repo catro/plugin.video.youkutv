@@ -124,6 +124,65 @@ class MyPlayer(xbmc.Player):
 player = MyPlayer()
 
 
+class ConfirmWindow(xbmcgui.WindowXMLDialog):
+    def __init__( self, *args, **kwargs):
+        self.selected = -1
+        self.session = None
+        self.oldWindow = None
+        self.busyCount = 0
+        xbmcgui.WindowXMLDialog.__init__( self )
+
+    def doClose(self):
+        self.session.window = self.oldWindow
+        self.close()
+        
+    def onInit(self):
+        if player.isPlaying():
+            player.stop()
+        if self.session:
+            self.session.window = self
+        else:
+            try:
+                self.session = VstSession(self)
+            except:
+                self.close()
+        self.setSessionWindow()
+        
+        
+    def onFocus( self, controlId ):
+        self.controlId = controlId
+        
+    def setSessionWindow(self):
+        try:
+            self.oldWindow = self.session.window
+        except:
+            self.oldWindow=self
+        self.session.window = self
+
+        
+    def onAction(self,action):
+        if action.getId() == ACTION_PARENT_DIR or action.getId() == ACTION_PREVIOUS_MENU:
+            if player.isPlaying():
+                player.stop()
+            self.doClose()
+        else:
+            return False
+
+        return True
+
+    def onClick( self, controlId ):
+        if (controlId == 1410):
+            self.selected = 0
+            self.doClose()
+        elif (controlId == 1411):
+            self.selected = 1
+            self.doClose()
+
+    def select(self):
+        self.doModal()
+        return self.selected
+
+
 class BaseWindow(xbmcgui.WindowXML):
     def __init__( self, *args, **kwargs):
         self.session = None
@@ -166,6 +225,8 @@ class BaseWindow(xbmcgui.WindowXML):
         else:
             return False
 
+        return True
+
     def showBusy(self):
         if self.busyCount > 0:
             self.busyCount += 1
@@ -179,8 +240,6 @@ class BaseWindow(xbmcgui.WindowXML):
             self.busyCount -= 1
         if self.busyCount == 0:
             xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-
-        return True
 
 
 class MainWindow(BaseWindow):
@@ -1104,7 +1163,7 @@ class HistoryWindow(BaseWindow):
         except:
             ret = None
 
-        if retOld != ret:
+        if oldret != ret:
             self.conInited = False
             self.initContent()
             self.setFocusId(1110)
@@ -1497,8 +1556,8 @@ def play(vid):
 
             if history.has_key('chapter'):
                 if history['chapter'] != 0 or history.has_key('offset'):
-                    choice = xbmcgui.Dialog().select('选择播放', ['继续上一次播放', '从头开始播放'])
-                    print 'choice: ' + str(choice)
+                    choice = openWindow('confirm')
+ 
                     if choice == 1:
                         try:
                             del(history['chapter'])
@@ -1539,6 +1598,11 @@ def openWindow(window_name,session=None,**kwargs):
         w = SearchWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'result':
         w = ResultWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
+    elif window_name == 'confirm':
+        w = ConfirmWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
+        ret = w.select()
+        del w
+        return ret
     else:
         w = BaseWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     w.doModal()            
