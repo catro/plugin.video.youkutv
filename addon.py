@@ -205,8 +205,8 @@ class ConfirmWindow(BaseWindowDialog):
 class FilterWindow(BaseWindowDialog):
     def __init__( self, *args, **kwargs):
         self.inited = False
-        self.selected = {}
         self.sdata = kwargs.get('sdata')
+        self.pdata = None
         BaseWindowDialog.__init__( self )
 
         
@@ -222,27 +222,74 @@ class FilterWindow(BaseWindowDialog):
         if self.inited:
             return
 
-        data = GetHttpData(HOST + 'layout/smarttv/filter_order?' + IDS + '&cid=' + self.sdata + '&type=show')
+        data = GetHttpData(HOST + 'layout/smarttv/filter_order?' + IDS + '&cid=' + self.sdata['cid'] + '&type=show')
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             return
         if data['status'] != 'success':
             return            
 
-        i = 0
-        for result in data['results']:
-            cl = self.getControl(1621)
-            for item in result['items']:
+        self.pdata = data['results']
+
+        for index in range(len(data['results'])):
+
+            cl = self.getControl(1620 + index)
+            if data['results'][index]['cat'] != 'ob':
+                listitem = xbmcgui.ListItem(label=u'全部' + data['results'][index]['title'], label2='')
+                cl.addItem(listitem)
+
+            if self.sdata.has_key(data['results'][index]['cat']):
+                selectedValue = self.sdata[data['results'][index]['cat']]
+            elif data['results'][index]['cat'] != 'ob':
+                selectedValue = ''
+                listitem.select(True)
+
+            for item in data['results'][index]['items']:
                 listitem = xbmcgui.ListItem(label=item['title'], label2=item['value'])
                 cl.addItem(listitem)
-            self.getControl(1620).addItem(cl)
+                if item['value'] == selectedValue:
+                    listitem.select(True)
 
+            if data['results'][index]['cat'] == 'ob':
+                if self.sdata.has_key(data['results'][index]['cat']) == False:
+                    cl.getListItem(0).select(True)
+
+        if len(data['results']) < 4:
+            self.getControl(1623).setEnabled(False)
         
         self.inited = True
 
     def select(self):
         self.doModal()
-        return self.selected
+
+        for i in range(4):
+            cl = self.getControl(1620 + i)
+            for index in  range(0, cl.size()):
+                if cl.getListItem(index).isSelected():
+                    if self.pdata[i]['cat'] == 'ob':
+                        self.sdata[self.pdata[i]['cat']] = self.pdata[i]['items'][index]['value']
+                    elif index > 0:
+                        self.sdata[self.pdata[i]['cat']] = self.pdata[i]['items'][index - 1]['value']
+                    else:
+                        if self.sdata.has_key(self.pdata[i]['cat']):
+                            del(self.sdata[self.pdata[i]['cat']])
+
+        return self.sdata
+
+    def onClick( self, controlId ):
+        if controlId >= 1620 and controlId <= 1623:
+            selected = self.getControl(controlId).getSelectedPosition()
+            for index in  range(self.getControl(controlId).size()):
+                if index != selected and self.getControl(controlId).getListItem(index).isSelected() == True:
+                    self.getControl(controlId).getListItem(index).select(False)
+            self.getControl(controlId).getSelectedItem().select(True)
+        elif controlId == 1610:
+            for i in range(4):
+                cl = self.getControl(1620 + i)
+                for index in  range(1, cl.size()):
+                    cl.getListItem(index).select(False)
+                cl.getListItem(0).select(True)
+
 
 
 class BaseWindow(xbmcgui.WindowXML):
@@ -348,7 +395,7 @@ class MainWindow(BaseWindow):
 
         data = GetHttpData(HOST + 'tv/main?' + IDS)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             return
         if data['status'] != 'success':
             return
@@ -392,7 +439,7 @@ class MainWindow(BaseWindow):
 
         data = GetHttpData(HOST + 'tv/main/top?' + IDS)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             return
         if data['status'] != 'success':
             return
@@ -494,7 +541,7 @@ class TopWindow(BaseWindow):
         #Catagory
         data = GetHttpData(HOST + 'tv/top/menu?' + IDS + '&top_id=' + self.sdata)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             return
         if data['status'] != 'success':
             return
@@ -530,7 +577,7 @@ class TopWindow(BaseWindow):
 
         data = GetHttpData(url)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             self.hideBusy()
             return
         if data['status'] != 'success':
@@ -577,6 +624,7 @@ class ChannelWindow(BaseWindow):
         self.conInited = False
         self.urlArgs = {'pz':'100', 'pg':'1', 'filter':''}
         self.sdata = kwargs.get('sdata')
+        self.filterArgs = {'cid':self.sdata}
         BaseWindow.__init__(self, args, kwargs)
 
         
@@ -603,7 +651,7 @@ class ChannelWindow(BaseWindow):
         #Catagory
         data = GetHttpData(HOST + 'tv/v2_0/childchannel/list?' + IDS + '&cid=' + self.sdata)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             return
         if data['status'] != 'success':
             return
@@ -639,13 +687,13 @@ class ChannelWindow(BaseWindow):
     def updateContent(self):
         self.showBusy()
 
-        url = HOST + 'layout/smarttv/item_list?' + IDS + '&cid=' + self.sdata
+        url = HOST + 'layout/smarttv/item_list?' + IDS
         for k in self.urlArgs:
             url = url + '&' + k + '=' + urllib.quote_plus(self.urlArgs[k])
 
         data = GetHttpData(url)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             self.hideBusy()
             return
         if data['status'] != 'success':
@@ -679,13 +727,28 @@ class ChannelWindow(BaseWindow):
             self.conInited = False
             self.initContent()
             self.setFocusId(620)
-        else:
+        elif controlId == 620:
             item = self.getControl(controlId).getSelectedItem()
             if item.getProperty('type') == 'show':
                 openWindow('detail', self.session, sdata=item.getProperty('showid'))
-                #play(item.getProperty('videoid'))
-            else:
-                xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
+        elif controlId == 603:
+            self.filterArgs = openWindow('filter', self.session, sdata=self.filterArgs)
+
+            self.getControl(610).selectItem(0)
+
+            filterData = []
+            for k in self.filterArgs:
+                try:
+                    filterData.append((unicode(k) + u':' + unicode(self.filterArgs[k])).encode('utf8)'))
+                except:
+                    filterData.append(k + ':' + self.filterArgs[k])
+            self.urlArgs['filter'] = '|'.join(filterData)
+
+            self.conInited = False
+            self.initContent()
+            self.setFocusId(620)
+        else:
+            xbmcgui.Dialog().ok('提示框', '此功能暂未实现，尽请期待')
 
 
     def onAction(self, action):
@@ -746,7 +809,7 @@ class OtherWindow(BaseWindow):
         #Catagory
         data = GetHttpData(HOST + 'openapi-wireless/layout/smarttv/channellist?' + IDS)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             return
         if data['status'] != 'success':
             return
@@ -784,7 +847,7 @@ class OtherWindow(BaseWindow):
 
         data = GetHttpData(url)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             self.hideBusy()
             return
         if data['status'] != 'success':
@@ -908,7 +971,7 @@ class ResultWindow(BaseWindow):
         #Catagory
         data = GetHttpData(HOST + 'layout/android3_0/searchfilters?' + IDS)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             return
         if data['status'] != 'success':
             return
@@ -957,7 +1020,7 @@ class ResultWindow(BaseWindow):
 
         data = GetHttpData(url)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             return
         if data['status'] != 'success':
             return
@@ -982,7 +1045,7 @@ class ResultWindow(BaseWindow):
 
         data = GetHttpData(url)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             self.hideBusy()
             return
         if data['status'] != 'success':
@@ -1137,7 +1200,7 @@ class SearchWindow(BaseWindow):
             title_key = 'keyword'
 
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             self.hideBusy()
             return
         if data['status'] != 'success':
@@ -1361,7 +1424,7 @@ class DetailWindow(BaseWindow):
 
         data = GetHttpData(HOST + 'layout/smarttv/play/detail?' + IDS + '&id=' + self.sdata)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             self.hideBusy()
             return
         if data['status'] != 'success':
@@ -1409,7 +1472,7 @@ class DetailWindow(BaseWindow):
 
         data = GetHttpData(HOST + 'common/shows/relate?' + IDS + '&id=' + self.sdata)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             self.hideBusy()
             return
         if data['status'] != 'success':
@@ -1485,7 +1548,7 @@ class SelectWindow(BaseWindowDialog):
 
         data = GetHttpData(HOST + 'layout/smarttv/shows/' + self.sdata + '/series?' + IDS)
         data = json.loads(data)
-        if not data['status']:
+        if data.has_key('status') == False:
             return
         if data['status'] != 'success':
             return            
@@ -1788,4 +1851,3 @@ def GetHttpData(url):
 
 if __name__ == '__main__':
     openWindow('main')
-    #openWindow('filter', sdata='669')
