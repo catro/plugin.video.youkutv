@@ -687,7 +687,7 @@ class ChannelWindow(BaseWindow):
     def updateContent(self):
         self.showBusy()
 
-        url = HOST + 'layout/smarttv/item_list?' + IDS
+        url = HOST + 'layout/smarttv/item_list?' + IDS + '&cid=' + self.sdata
         for k in self.urlArgs:
             url = url + '&' + k + '=' + urllib.quote_plus(self.urlArgs[k])
 
