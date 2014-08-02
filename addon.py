@@ -20,6 +20,11 @@ IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39
 Navigation=['首页', '频道', '排行']
 ContentID=[520, 560, 580]
 TopData=['播放排行榜', '搜索排行榜', '特色排行榜']
+settings_data = {'type':['1080P', '超清', '高清', '标清'], 'language':['国语', '粤语', '英语']}
+try:
+    settings = eval(cache.get('settings'))
+except:
+    settings={'type':'1080P', 'language':'国语'}
 ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
              '669': {'icon': 'channel_child_icon.png', 'title': '少儿'},\
              '96': {'icon': 'channel_movie_icon.png', 'title': '电影'},\
@@ -88,7 +93,7 @@ class MyPlayer(xbmc.Player):
             pass
 
     def onPlayBackStopped(self):
-        if self.myHistory['offset'] < 5:
+        if self.myHistory.has_key('offset') and self.myHistory['offset'] < 5:
             del(self.myHistory['offset'])
         vid = self.myHistory['vid']
         try:
@@ -200,10 +205,77 @@ class ConfirmWindow(BaseWindowDialog):
     def select(self):
         self.doModal()
         return self.selected
-    
+     
+
+class SettingsWindow(BaseWindowDialog):
+    def __init__( self, *args, **kwargs):
+        self.resolutionType = settings['type']
+        self.language = settings['language']
+        self.inited = False
+        BaseWindowDialog.__init__( self )
+
+        
+    def onInit(self):
+        BaseWindowDialog.onInit(self)
+        self.init()
+
+
+    def init(self):
+        if self.inited:
+            return
+
+        for item in settings_data['type']:
+            listitem = xbmcgui.ListItem(label=item)
+            self.getControl(1720).addItem(listitem)
+            if settings['type'] == item:
+                listitem.select(True)
+
+        for item in settings_data['language']:
+            listitem = xbmcgui.ListItem(label=item)
+            self.getControl(1721).addItem(listitem)
+            if settings['language'] == item:
+                listitem.select(True)
+
+        self.inited = True
+
+
+    def updateSelection(self, controlId):
+        if controlId == 1720 or controlId == 1721:
+            selected = self.getControl(controlId).getSelectedPosition()
+            for index in  range(self.getControl(controlId).size()):
+                if index != selected and self.getControl(controlId).getListItem(index).isSelected() == True:
+                    self.getControl(controlId).getListItem(index).select(False)
+            self.getControl(controlId).getSelectedItem().select(True)
+            if controlId == 1720:
+                self.resolutionType = settings_data['type'][self.getControl(controlId).getSelectedPosition()]
+            else:
+                self.language = settings_data['language'][self.getControl(controlId).getSelectedPosition()]
+
+
+    def onClick( self, controlId ):
+        if controlId == 1710:
+            for i in range(2):
+                cl = self.getControl(1720 + i)
+                for index in  range(1, cl.size()):
+                    cl.getListItem(index).select(False)
+                cl.getListItem(0).select(True)
+        else:
+            settings['type'] = self.resolutionType
+            settings['language'] = self.language
+            writeSettings()
+            self.doClose()
+
+
+    def onAction(self,action):
+        BaseWindowDialog.onAction(self, action)
+        Id = action.getId()
+        if (Id >= ACTION_MOVE_LEFT and Id <= ACTION_MOVE_DOWN) or Id == ACTION_MOUSE_MOVE:
+            self.updateSelection(self.getFocusId())
+
 
 class FilterWindow(BaseWindowDialog):
     def __init__( self, *args, **kwargs):
+        self.cancel = True
         self.inited = False
         self.sdata = kwargs.get('sdata')
         self.pdata = None
@@ -262,6 +334,9 @@ class FilterWindow(BaseWindowDialog):
     def select(self):
         self.doModal()
 
+        if self.cancel == True:
+            return self.sdata
+
         for i in range(4):
             cl = self.getControl(1620 + i)
             for index in  range(0, cl.size()):
@@ -276,19 +351,31 @@ class FilterWindow(BaseWindowDialog):
 
         return self.sdata
 
-    def onClick( self, controlId ):
+
+    def updateSelection(self, controlId):
         if controlId >= 1620 and controlId <= 1623:
             selected = self.getControl(controlId).getSelectedPosition()
             for index in  range(self.getControl(controlId).size()):
                 if index != selected and self.getControl(controlId).getListItem(index).isSelected() == True:
                     self.getControl(controlId).getListItem(index).select(False)
             self.getControl(controlId).getSelectedItem().select(True)
-        elif controlId == 1610:
+
+    def onClick( self, controlId ):
+        if controlId == 1610:
             for i in range(4):
                 cl = self.getControl(1620 + i)
                 for index in  range(1, cl.size()):
                     cl.getListItem(index).select(False)
                 cl.getListItem(0).select(True)
+        else:
+            self.cancel = False
+            self.doClose()
+
+    def onAction(self,action):
+        BaseWindowDialog.onAction(self, action)
+        Id = action.getId()
+        if (Id >= ACTION_MOVE_LEFT and Id <= ACTION_MOVE_DOWN) or Id == ACTION_MOUSE_MOVE:
+            self.updateSelection(self.getFocusId())
 
 
 
@@ -469,6 +556,8 @@ class MainWindow(BaseWindow):
     def onClick( self, controlId ):
         if controlId == 510:
             self.updateNavigation()
+        elif controlId == 512:
+            openWindow('settings', self.session)
         else:
             item = self.getControl(controlId).getSelectedItem()
             if item.getProperty('mtype') == 'show':
@@ -1739,14 +1828,20 @@ def play(vid):
             #Get url from www.flvcd.com
             flvcdurl='http://www.flvcd.com/parse.php?format=super&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+vid+'.html')
             result = GetHttpData(flvcdurl)
-            foobars = re.compile('(http://k.youku.com/.*)"\starget', re.M).findall(result)
+            foobars = re.compile('<input type="hidden" name="inf" value="(.*)/>', re.M).findall(result)
             if len(foobars) < 1:
                 xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
                 return
+            foobars = foobars[0].split('|')
             playlist = xbmc.PlayList(1)
             playlist.clear()
-            for i in range(0,len(foobars)):
-                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(len(foobars)) + u"节"
+            for total in range(0,len(foobars)):
+                if foobars[total][:4] != 'http':
+                    total -= 1
+                    break
+            total += 1
+            for i in range(total):
+                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
                 listitem=xbmcgui.ListItem(title)
                 listitem.setInfo(type="Video",infoLabels={"Title":title})
                 playlist.add(foobars[i], listitem)
@@ -1807,6 +1902,8 @@ def openWindow(window_name,session=None,**kwargs):
         w = ResultWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'top':
         w = TopWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
+    elif window_name == 'settings':
+        w = SettingsWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'filter':
         w = FilterWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
         ret = w.select()
@@ -1847,6 +1944,10 @@ def GetHttpData(url):
         httpdata = '{"status": "Fail"}'
 
     return httpdata
+
+
+def writeSettings():
+    cache.set('settings', repr(settings))
 
 
 if __name__ == '__main__':

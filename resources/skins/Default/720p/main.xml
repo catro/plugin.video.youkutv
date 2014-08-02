@@ -43,6 +43,8 @@
             <height>88</height>
             <viewtype>list</viewtype>
             <ondown>511</ondown>
+            <onleft>-</onleft>
+            <onright>512</onright>
             <itemlayout width="120" height="88">
                 <control type="label">
                     <posx>35</posx>
@@ -78,6 +80,21 @@
                     <info>ListItem.Label</info>
                 </control>
             </focusedlayout>
+        </control>
+        <control type="button" id="512">
+            <posx>1090</posx>
+            <posy>80</posy>
+            <width>120</width>
+            <height>88</height>   
+            <font>font30</font>
+            <textcolor>blue</textcolor>
+            <align>center</align>
+            <aligny>center</aligny>
+            <onleft>510</onleft>
+            <ondown>511</ondown>
+            <texturefocus>nav_focused_2.png</texturefocus>
+            <texturenofocus />
+            <label>设置</label>
         </control>
         <control type="group" id="511">
             <posx>86</posx>
