@@ -20,11 +20,11 @@ IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39
 Navigation=['首页', '频道', '排行']
 ContentID=[520, 560, 580]
 TopData=['播放排行榜', '搜索排行榜', '特色排行榜']
-settings_data = {'type':['1080P', '超清', '高清', '标清'], 'language':['国语', '粤语', '英语']}
+settings_data = {'resolution':['super', 'high'], 'type':['超清', '高清'], 'langid':[0, 1, 2, 6], 'language':['默认', '国语', '粤语', '英语']}
 try:
     settings = eval(cache.get('settings'))
 except:
-    settings={'type':'1080P', 'language':'国语'}
+    settings={'type':1, 'langid':1}
 ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
              '669': {'icon': 'channel_child_icon.png', 'title': '少儿'},\
              '96': {'icon': 'channel_movie_icon.png', 'title': '电影'},\
@@ -210,7 +210,7 @@ class ConfirmWindow(BaseWindowDialog):
 class SettingsWindow(BaseWindowDialog):
     def __init__( self, *args, **kwargs):
         self.resolutionType = settings['type']
-        self.language = settings['language']
+        self.langid = settings['langid']
         self.inited = False
         BaseWindowDialog.__init__( self )
 
@@ -224,17 +224,23 @@ class SettingsWindow(BaseWindowDialog):
         if self.inited:
             return
 
-        for item in settings_data['type']:
-            listitem = xbmcgui.ListItem(label=item)
+        selected = 0
+        for i in range(len(settings_data['type'])):
+            listitem = xbmcgui.ListItem(label=settings_data['type'][i])
             self.getControl(1720).addItem(listitem)
-            if settings['type'] == item:
+            if settings['type'] == i:
                 listitem.select(True)
+                selected = i
+        self.getControl(1720).selectItem(selected)
 
-        for item in settings_data['language']:
-            listitem = xbmcgui.ListItem(label=item)
+        selected = 0
+        for i in range(len(settings_data['language'])):
+            listitem = xbmcgui.ListItem(label=settings_data['language'][i])
             self.getControl(1721).addItem(listitem)
-            if settings['language'] == item:
+            if settings['langid'] == settings_data['langid'][i]:
                 listitem.select(True)
+                selected = i
+        self.getControl(1721).selectItem(selected)
 
         self.inited = True
 
@@ -247,29 +253,26 @@ class SettingsWindow(BaseWindowDialog):
                     self.getControl(controlId).getListItem(index).select(False)
             self.getControl(controlId).getSelectedItem().select(True)
             if controlId == 1720:
-                self.resolutionType = settings_data['type'][self.getControl(controlId).getSelectedPosition()]
+                self.resolutionType = self.getControl(controlId).getSelectedPosition()
             else:
-                self.language = settings_data['language'][self.getControl(controlId).getSelectedPosition()]
+                self.langid = settings_data['langid'][self.getControl(controlId).getSelectedPosition()]
 
 
     def onClick( self, controlId ):
         if controlId == 1710:
-            for i in range(2):
-                cl = self.getControl(1720 + i)
-                for index in  range(1, cl.size()):
-                    cl.getListItem(index).select(False)
-                cl.getListItem(0).select(True)
-        else:
-            settings['type'] = self.resolutionType
-            settings['language'] = self.language
-            writeSettings()
-            self.doClose()
+            self.resolutionType = 0
+            self.langid = 0
+
+        settings['type'] = self.resolutionType
+        settings['langid'] = self.langid
+        writeSettings()
+        self.doClose()
 
 
     def onAction(self,action):
         BaseWindowDialog.onAction(self, action)
         Id = action.getId()
-        if (Id >= ACTION_MOVE_LEFT and Id <= ACTION_MOVE_DOWN) or Id == ACTION_MOUSE_MOVE:
+        if Id == ACTION_MOVE_LEFT or  Id == ACTION_MOVE_RIGHT or Id == ACTION_MOUSE_MOVE:
             self.updateSelection(self.getFocusId())
 
 
@@ -305,6 +308,7 @@ class FilterWindow(BaseWindowDialog):
 
         for index in range(len(data['results'])):
 
+            selected = 0
             cl = self.getControl(1620 + index)
             if data['results'][index]['cat'] != 'ob':
                 listitem = xbmcgui.ListItem(label=u'全部' + data['results'][index]['title'], label2='')
@@ -316,15 +320,22 @@ class FilterWindow(BaseWindowDialog):
                 selectedValue = ''
                 listitem.select(True)
 
-            for item in data['results'][index]['items']:
+            for i in range(len(data['results'][index]['items'])):
+                item = data['results'][index]['items'][i]
                 listitem = xbmcgui.ListItem(label=item['title'], label2=item['value'])
                 cl.addItem(listitem)
                 if item['value'] == selectedValue:
+                    if data['results'][index]['cat'] == 'ob':
+                        selected = i
+                    else:
+                        selected = i + 1
                     listitem.select(True)
 
             if data['results'][index]['cat'] == 'ob':
                 if self.sdata.has_key(data['results'][index]['cat']) == False:
                     cl.getListItem(0).select(True)
+
+            cl.selectItem(selected)
 
         if len(data['results']) < 4:
             self.getControl(1623).setEnabled(False)
@@ -367,16 +378,15 @@ class FilterWindow(BaseWindowDialog):
                 for index in  range(1, cl.size()):
                     cl.getListItem(index).select(False)
                 cl.getListItem(0).select(True)
-        else:
-            self.cancel = False
-            self.doClose()
+
+        self.cancel = False
+        self.doClose()
 
     def onAction(self,action):
         BaseWindowDialog.onAction(self, action)
         Id = action.getId()
-        if (Id >= ACTION_MOVE_LEFT and Id <= ACTION_MOVE_DOWN) or Id == ACTION_MOUSE_MOVE:
+        if Id == ACTION_MOVE_LEFT or  Id == ACTION_MOVE_RIGHT or Id == ACTION_MOUSE_MOVE:
             self.updateSelection(self.getFocusId())
-
 
 
 class BaseWindow(xbmcgui.WindowXML):
@@ -757,7 +767,7 @@ class ChannelWindow(BaseWindow):
 
         self.selectedNavigation = 0
         self.getControl(610).getListItem(0).select(True)
-        self.setFocusId(610)
+        self.setFocusId(620)
 
         self.subInited = True
 
@@ -1794,82 +1804,67 @@ def getProperty(item, key):
 
 def play(vid):
     try:
+        playid = vid
         xbmc.executebuiltin("ActivateWindow(busydialog)")
-        stypes = ['hd2', 'mp4', 'flv']
         moviesurl="http://v.youku.com/player/getPlayList/VideoIDS/{0}/ctype/12/ev/1".format(vid)
         result = GetHttpData(moviesurl)
         movinfo = json.loads(result.replace('\r\n',''))
         movdat = movinfo['data'][0]
         streamfids = movdat['streamfileids']
         video_id = movdat['videoid']
-        stype = 'flv'
 
-        if len(streamfids) > 1:
-            selstypes = [v for v in stypes if v in streamfids]
-            stype = selstypes[0]
+        #Set language
+        if settings['langid'] != 0 and movdat.has_key('dvd') and 'audiolang' in movdat['dvd']:
+            for item in movdat['dvd']['audiolang']:
+                if item['langid'] == settings['langid']:
+                    if item['vid'] != vid:
+                        playid = item['vid']
 
-        if False:
-            #Use m3u8 url
-            playurl = r'http://v.youku.com/player/getM3U8/vid/' + vid + r'/type/' + stype + '/video.m3u8'
-            listitem=xbmcgui.ListItem()
-            listitem.setInfo(type="Video",infoLabels={"Title":movdat['title']})
-            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-            try:
-                ret = eval(cache.get('history'))
-                if ret.has_key(vid):
-                    history = ret[vid] 
-                else:
-                    history = {}
-            except:
-                ret = {}
+        #Get url from www.flvcd.com
+        flvcdurl='http://www.flvcd.com/parse.php?format=' + settings_data['resolution'][settings['type']] + '&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+playid+'.html')
+        result = GetHttpData(flvcdurl)
+        foobars = re.compile('<input type="hidden" name="inf" value="(.*)/>', re.M).findall(result)
+        if len(foobars) < 1:
+            xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
+            return
+        foobars = foobars[0].split('|')
+        playlist = xbmc.PlayList(1)
+        playlist.clear()
+        for total in range(0,len(foobars)):
+            if foobars[total][:4] != 'http':
+                total -= 1
+                break
+        total += 1
+        for i in range(total):
+            title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
+            listitem=xbmcgui.ListItem(title)
+            listitem.setInfo(type="Video",infoLabels={"Title":title})
+            playlist.add(foobars[i], listitem)
+        xbmc.executebuiltin( "Dialog.Close(busydialog)" )
+        try:
+            ret = eval(cache.get('history'))
+            if ret.has_key(vid):
+                history = ret[vid] 
+            else:
                 history = {'title': movdat['title'], 'vid': vid, 'logo': movdat['logo']}
-            player.play(playurl, listitem)
-        else:
-            #Get url from www.flvcd.com
-            flvcdurl='http://www.flvcd.com/parse.php?format=super&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+vid+'.html')
-            result = GetHttpData(flvcdurl)
-            foobars = re.compile('<input type="hidden" name="inf" value="(.*)/>', re.M).findall(result)
-            if len(foobars) < 1:
-                xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
-                return
-            foobars = foobars[0].split('|')
-            playlist = xbmc.PlayList(1)
-            playlist.clear()
-            for total in range(0,len(foobars)):
-                if foobars[total][:4] != 'http':
-                    total -= 1
-                    break
-            total += 1
-            for i in range(total):
-                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
-                listitem=xbmcgui.ListItem(title)
-                listitem.setInfo(type="Video",infoLabels={"Title":title})
-                playlist.add(foobars[i], listitem)
-            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-            try:
-                ret = eval(cache.get('history'))
-                if ret.has_key(vid):
-                    history = ret[vid] 
-                else:
-                    history = {'title': movdat['title'], 'vid': vid, 'logo': movdat['logo']}
-            except:
-                ret = {}
-                history = {'title': movdat['title'], 'vid': vid, 'logo': movdat['logo']}
+        except:
+            ret = {}
+            history = {'title': movdat['title'], 'vid': vid, 'logo': movdat['logo']}
 
-            if history.has_key('chapter'):
-                if history['chapter'] != 0 or history.has_key('offset'):
-                    choice = openWindow('confirm')
- 
-                    if choice == 1:
-                        try:
-                            del(history['chapter'])
-                            del(history['offset'])
-                        except:
-                            pass
-                    elif choice == -1:
-                        return
-                        
-            player.play(playlist, arg=history)
+        if history.has_key('chapter'):
+            if history['chapter'] != 0 or history.has_key('offset'):
+                choice = openWindow('confirm')
+
+                if choice == 1:
+                    try:
+                        del(history['chapter'])
+                        del(history['offset'])
+                    except:
+                        pass
+                elif choice == -1:
+                    return
+                    
+        player.play(playlist, arg=history)
     except:
         xbmc.executebuiltin( "Dialog.Close(busydialog)" )
         xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')

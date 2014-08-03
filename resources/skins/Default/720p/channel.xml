@@ -1,5 +1,5 @@
 <window type="window">
-    <defaultcontrol>620</defaultcontrol>
+    <defaultcontrol>610</defaultcontrol>
     <coordinates>
         <system>1</system>
         <posx>0</posx>
@@ -48,7 +48,7 @@
             <posy>10</posy>
             <width>129</width>
             <height>42</height>
-            <onleft>620</onleft>
+            <onleft>610</onleft>
             <ondown>620</ondown>
             <align>center</align>
             <aligny>center</aligny>
@@ -62,7 +62,7 @@
             <width>200</width>
             <height>600</height>
             <viewtype>list</viewtype>
-            <onright>620</onright>
+            <onright>603</onright>
             <itemlayout width="200" height="65">
                 <control type="image">
                     <posx>20</posx>
