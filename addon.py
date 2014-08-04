@@ -20,11 +20,11 @@ IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39
 Navigation=['首页', '频道', '排行']
 ContentID=[520, 560, 580]
 TopData=['播放排行榜', '搜索排行榜', '特色排行榜']
-settings_data = {'resolution': ['super', 'super', 'high', 'high'], 'type':[u'1080P', u'超清', u'高清', u'FLV标清'], 'langid':[0, 1, 2, 6], 'language':['默认', '国语', '粤语', '英语']}
+settings_data = {'resolution': ['super', 'super', 'high', 'high'], 'type':[u'1080P', u'超清', u'高清', u'FLV标清'], 'langid':[0, 1, 2, 6], 'language':['默认', '国语', '粤语', '英语'], 'source':['flvcd', 'flvxz']}
 try:
     settings = eval(cache.get('settings'))
 except:
-    settings={'type':0, 'langid':0}
+    settings={'type':0, 'langid':0, 'source':0}
 ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
              '669': {'icon': 'channel_child_icon.png', 'title': '少儿'},\
              '96': {'icon': 'channel_movie_icon.png', 'title': '电影'},\
@@ -33,8 +33,6 @@ ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
              '84': {'icon': 'channel_documentary_icon.png', 'title': '纪录片'},\
              '87': {'icon': 'channel_education_icon.png', 'title': '教育'},\
              }
-
-Parser='flvxz'
 
 
 ACTION_MOVE_LEFT      = 1
@@ -211,8 +209,9 @@ class ConfirmWindow(BaseWindowDialog):
 
 class SettingsWindow(BaseWindowDialog):
     def __init__( self, *args, **kwargs):
-        self.resolutionType = settings['type']
-        self.langid = settings['langid']
+        self.resolutionType = settings['type'] if settings.has_key('type') else 0
+        self.langid = settings['langid'] if settings.has_key('langid') else 0
+        self.source = settings['source'] if settings.has_key('source') else 0
         self.inited = False
         BaseWindowDialog.__init__( self )
 
@@ -244,11 +243,20 @@ class SettingsWindow(BaseWindowDialog):
                 selected = i
         self.getControl(1721).selectItem(selected)
 
+        selected = 0
+        for i in range(len(settings_data['source'])):
+            listitem = xbmcgui.ListItem(label=settings_data['source'][i])
+            self.getControl(1722).addItem(listitem)
+            if settings['source'] == i:
+                listitem.select(True)
+                selected = i
+        self.getControl(1722).selectItem(selected)
+
         self.inited = True
 
 
     def updateSelection(self, controlId):
-        if controlId == 1720 or controlId == 1721:
+        if controlId == 1720 or controlId == 1721 or controlId == 1722:
             selected = self.getControl(controlId).getSelectedPosition()
             for index in  range(self.getControl(controlId).size()):
                 if index != selected and self.getControl(controlId).getListItem(index).isSelected() == True:
@@ -256,17 +264,21 @@ class SettingsWindow(BaseWindowDialog):
             self.getControl(controlId).getSelectedItem().select(True)
             if controlId == 1720:
                 self.resolutionType = self.getControl(controlId).getSelectedPosition()
-            else:
+            elif controlId == 1721:
                 self.langid = settings_data['langid'][self.getControl(controlId).getSelectedPosition()]
+            else:
+                self.source = self.getControl(controlId).getSelectedPosition()
 
 
     def onClick( self, controlId ):
         if controlId == 1710:
             self.resolutionType = 0
             self.langid = 0
+            self.source = 0
 
         settings['type'] = self.resolutionType
         settings['langid'] = self.langid
+        settings['source'] = self.source
         writeSettings()
         self.doClose()
 
@@ -1823,8 +1835,7 @@ def play(vid):
                         playid = item['vid']
 
         #Get url from www.flvcd.com
-        print Parser
-        if Parser == 'flvcd':
+        if settings['source'] == 0:
             flvcdurl='http://www.flvcd.com/parse.php?format=' + settings_data['resolution'][settings['type']] + '&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+playid+'.html')
             result = GetHttpData(flvcdurl)
             foobars = re.compile('<input type="hidden" name="inf" value="(.*)/>', re.M).findall(result)
