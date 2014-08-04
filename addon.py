@@ -20,11 +20,11 @@ IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39
 Navigation=['首页', '频道', '排行']
 ContentID=[520, 560, 580]
 TopData=['播放排行榜', '搜索排行榜', '特色排行榜']
-settings_data = {'resolution':['super', 'high'], 'type':['超清', '高清'], 'langid':[0, 1, 2, 6], 'language':['默认', '国语', '粤语', '英语']}
+settings_data = {'resolution': ['super', 'super', 'high', 'high'], 'type':[u'1080P', u'超清', u'高清', u'FLV标清'], 'langid':[0, 1, 2, 6], 'language':['默认', '国语', '粤语', '英语']}
 try:
     settings = eval(cache.get('settings'))
 except:
-    settings={'type':1, 'langid':1}
+    settings={'type':0, 'langid':0}
 ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
              '669': {'icon': 'channel_child_icon.png', 'title': '少儿'},\
              '96': {'icon': 'channel_movie_icon.png', 'title': '电影'},\
@@ -33,6 +33,8 @@ ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
              '84': {'icon': 'channel_documentary_icon.png', 'title': '纪录片'},\
              '87': {'icon': 'channel_education_icon.png', 'title': '教育'},\
              }
+
+Parser='flvxz'
 
 
 ACTION_MOVE_LEFT      = 1
@@ -1821,25 +1823,59 @@ def play(vid):
                         playid = item['vid']
 
         #Get url from www.flvcd.com
-        flvcdurl='http://www.flvcd.com/parse.php?format=' + settings_data['resolution'][settings['type']] + '&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+playid+'.html')
-        result = GetHttpData(flvcdurl)
-        foobars = re.compile('<input type="hidden" name="inf" value="(.*)/>', re.M).findall(result)
-        if len(foobars) < 1:
-            xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
-            return
-        foobars = foobars[0].split('|')
-        playlist = xbmc.PlayList(1)
-        playlist.clear()
-        for total in range(0,len(foobars)):
-            if foobars[total][:4] != 'http':
-                total -= 1
-                break
-        total += 1
-        for i in range(total):
-            title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
-            listitem=xbmcgui.ListItem(title)
-            listitem.setInfo(type="Video",infoLabels={"Title":title})
-            playlist.add(foobars[i], listitem)
+        print Parser
+        if Parser == 'flvcd':
+            flvcdurl='http://www.flvcd.com/parse.php?format=' + settings_data['resolution'][settings['type']] + '&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+playid+'.html')
+            result = GetHttpData(flvcdurl)
+            foobars = re.compile('<input type="hidden" name="inf" value="(.*)/>', re.M).findall(result)
+            if len(foobars) < 1:
+                xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
+                return
+            foobars = foobars[0].split('|')
+            playlist = xbmc.PlayList(1)
+            playlist.clear()
+            for total in range(0,len(foobars)):
+                if foobars[total][:4] != 'http':
+                    total -= 1
+                    break
+            total += 1
+            for i in range(total):
+                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
+                listitem=xbmcgui.ListItem(title)
+                listitem.setInfo(type="Video",infoLabels={"Title":title})
+                playlist.add(foobars[i], listitem)
+        else:
+            flvxzurl='http://api.flvxz.com/site/youku/vid/' + playid + '/jsonp/purejson'
+            data = GetHttpData(flvxzurl)
+            data = json.loads(data)
+
+            if len(data) == 0:
+                xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
+                return
+
+            #Find matched resolution
+            files = []
+            for quality in range(settings['type'], len(settings_data['resolution'])):
+                for item in data:
+                    if item['quality'] == settings_data['type'][quality]:
+                        files = item['files']
+                        break
+                if len(files) > 0:
+                    break
+
+            total = len(files)
+            if total == 0:
+                xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
+                return
+
+            playlist = xbmc.PlayList(1)
+            playlist.clear()
+            for i in range(total):
+                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
+                listitem=xbmcgui.ListItem(title)
+                listitem.setInfo(type="Video",infoLabels={"Title":title})
+                playlist.add(files[i]['furl'], listitem)
+
         xbmc.executebuiltin( "Dialog.Close(busydialog)" )
         try:
             ret = eval(cache.get('history'))
