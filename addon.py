@@ -581,7 +581,7 @@ class MainWindow(BaseWindow):
         if controlId == 510:
             self.updateNavigation()
         elif controlId == 512:
-            openWindow('settings', self.session)
+            openWindow('mysettings', self.session)
         else:
             item = self.getControl(controlId).getSelectedItem()
             if item.getProperty('mtype') == 'show':
@@ -1944,7 +1944,7 @@ def openWindow(window_name,session=None,**kwargs):
         w = ResultWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'top':
         w = TopWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
-    elif window_name == 'settings':
+    elif window_name == 'mysettings':
         w = SettingsWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
     elif window_name == 'filter':
         w = FilterWindow(windowFile , __cwd__, "Default",session=session,**kwargs)
