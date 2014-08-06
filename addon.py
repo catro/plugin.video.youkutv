@@ -60,6 +60,7 @@ ACTION_CONTEXT_MENU   = 117
 
 class MyPlayer(xbmc.Player):
     def __init__(self):
+        self.myEnabled = False
         self.myHistory = None
         self.myItem = ''
         xbmc.Player.__init__(self)
@@ -80,7 +81,11 @@ class MyPlayer(xbmc.Player):
         t = threading.Timer(0.5, self.timeEntry)
         t.start()
 
-        xbmc.Player.play(self, item, listitem, windowed, startpos)
+        try:
+            xbmc.Player.play(self, item, listitem, windowed, startpos)
+            self.myEnabled = True
+        except:
+            xbmc.Player.play(self, item, listitem, windowed)
 
     def timeEntry(self):
         self.updateHistory()
@@ -102,9 +107,10 @@ class MyPlayer(xbmc.Player):
             ret = {}
 
         #Add to history
-        self.myHistory['addedTime'] = time.time()
-        ret[vid] = self.myHistory
-        cache.set('history', repr(ret))
+        if self.myEnabled == True:
+            self.myHistory['addedTime'] = time.time()
+            ret[vid] = self.myHistory
+            cache.set('history', repr(ret))
         xbmc.Player.onPlayBackStopped(self)
 
     def onPlayBackStarted(self):
