@@ -1718,11 +1718,13 @@ class SelectWindow(BaseWindowDialog):
                 else:
                     trim = self.pdata[0]['title'][:lastSpace]
                 fromTitle = True
+        print start
+        print end
         for i in range(start, end + 1):
             if fromTitle == True:
-                listitem = xbmcgui.ListItem(label=self.pdata[i-1]['title'].replace(trim, ''))
+                listitem = xbmcgui.ListItem(label=self.pdata[i-1]['title'].replace(trim, ''), label2=str(i-1))
             else:
-                listitem = xbmcgui.ListItem(label=str(self.pdata[i-1]['video_stage']))
+                listitem = xbmcgui.ListItem(label=str(self.pdata[i-1]['video_stage']), label2=str(i-1))
             self.getControl(820).addItem(listitem)
         
 
@@ -1732,7 +1734,7 @@ class SelectWindow(BaseWindowDialog):
             self.selectRange(self.getControl(810).getSelectedPosition())
         else:
             self.doClose()
-            play(self.pdata[self.getControl(820).getSelectedPosition()]['videoid'])
+            play(self.pdata[int(self.getControl(820).getSelectedItem().getLabel2())]['videoid'])
 
 
     def onAction(self, action):
