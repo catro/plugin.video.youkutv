@@ -2,7 +2,7 @@
 # default.py
 
 import xbmcgui, xbmcaddon, xbmc
-import json, sys, urllib, urllib2, gzip, StringIO, re, os, time, threading
+import json, sys, urllib, urllib2, gzip, StringIO, re, os, time, threading, socket
 try:
    import StorageServer
 except:
@@ -13,6 +13,7 @@ __addon__ = xbmcaddon.Addon(id=__addonid__)
 __cwd__ = __addon__.getAddonInfo('path')
 __profile__    = xbmc.translatePath( __addon__.getAddonInfo('profile') )
 __resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
+socket.setdefaulttimeout(10) 
 sys.path.append (__resource__)
 cache = StorageServer.StorageServer(__addonid__, 87600)
 HOST='http://tv.api.3g.youku.com/'
@@ -475,10 +476,10 @@ class MainWindow(BaseWindow):
         BaseWindow.onInit(self)
 
         self.showBusy()
-        
+
+        self.initNavigation()
         self.initMain()
         self.initChannelTop()
-        self.initNavigation()
 
         self.hideBusy()
 
@@ -620,6 +621,10 @@ class MainWindow(BaseWindow):
 
                 #Enable new selection
                 self.selectedNavigation = self.getControl(510).getSelectedPosition()
+                if self.selectedNavigation == 0:
+                    self.initMain()
+                elif self.selectedNavigation == 1:
+                    self.initChannelTop()
                 self.getControl(ContentID[self.selectedNavigation]).setEnabled(True)
                 self.getControl(ContentID[self.selectedNavigation]).setVisible(True)
                 self.getControl(510).getSelectedItem().select(True)
@@ -1638,17 +1643,17 @@ class DetailWindow(BaseWindow):
             self.getControl(722).setLabel('已收藏')
             
             
-class SelectWindow(BaseWindowDialog):
+class SelectWindow(BaseWindow):
     def __init__( self, *args, **kwargs):
         self.inited = False
         self.sdata = kwargs.get('sdata')
         self.pdata = None
         self.selected = 0
-        BaseWindowDialog.__init__( self )
+        BaseWindow.__init__( self )
        
         
     def onInit(self):
-        BaseWindowDialog.onInit( self )
+        BaseWindow.onInit( self )
 
         xbmc.executebuiltin("ActivateWindow(busydialog)")
         self.init()
@@ -1722,16 +1727,15 @@ class SelectWindow(BaseWindowDialog):
         
 
     def onClick( self, controlId ):
-        BaseWindowDialog.onClick(self, controlId)
+        BaseWindow.onClick(self, controlId)
         if controlId == 810:
             self.selectRange(self.getControl(810).getSelectedPosition())
         else:
-            self.doClose()
             play(self.pdata[int(self.getControl(820).getSelectedItem().getLabel2())]['videoid'])
 
 
     def onAction(self, action):
-        BaseWindowDialog.onAction(self, action)
+        BaseWindow.onAction(self, action)
         if self.getFocusId() == 810:
             if action.getId() == ACTION_MOVE_LEFT or action.getId() == ACTION_MOVE_RIGHT:
                 self.selectRange(self.getControl(810).getSelectedPosition())
@@ -1961,7 +1965,7 @@ def openWindow(window_name,session=None,**kwargs):
 
 
 def GetHttpData(url):
-    print ('Frech: ' + url)
+    log('Frech: ' + url)
     try:
         req = urllib2.Request(url)
         req.add_header('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) {0}{1}'.
@@ -1981,9 +1985,16 @@ def GetHttpData(url):
             if (charset != 'utf-8') and (charset != 'utf8'):
                 httpdata = unicode(httpdata, charset).encode('utf8')
     except:
+        if xbmcgui.Dialog().yesno('错误', '网络超时，是否继续？'):
+            return GetHttpData(url)
+        log('Frech fail')
         httpdata = '{"status": "Fail"}'
 
     return httpdata
+
+
+def log(msg):
+    print ('[YouKu TV]%s' % msg)
 
 
 def writeSettings():
