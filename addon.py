@@ -70,13 +70,8 @@ class MyPlayer(xbmc.Player):
         self.myHistory = arg
         self.myItem = item
 
-        if arg.has_key('chapter'):
-            startpos = arg['chapter']
-        try:
-            offset = arg['offset']
-            item[startpos].setProperty('StartOffset', str(offset))
-        except:
-            pass
+        if arg.has_key('offset'):
+            listitem.setProperty('StartOffset', str(arg['offset']))
 
         t = threading.Timer(0.5, self.timeEntry)
         t.start()
@@ -1718,8 +1713,6 @@ class SelectWindow(BaseWindowDialog):
                 else:
                     trim = self.pdata[0]['title'][:lastSpace]
                 fromTitle = True
-        print start
-        print end
         for i in range(start, end + 1):
             if fromTitle == True:
                 listitem = xbmcgui.ListItem(label=self.pdata[i-1]['title'].replace(trim, ''), label2=str(i-1))
@@ -1851,18 +1844,15 @@ def play(vid):
                 xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
                 return
             foobars = foobars[0].split('|')
-            playlist = xbmc.PlayList(1)
-            playlist.clear()
             for total in range(0,len(foobars)):
                 if foobars[total][:4] != 'http':
                     total -= 1
                     break
             total += 1
-            for i in range(total):
-                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
-                listitem=xbmcgui.ListItem(title)
-                listitem.setInfo(type="Video",infoLabels={"Title":title})
-                playlist.add(foobars[i], listitem)
+        
+            playlist = 'stack://' + ' , '.join(foobars[:-1])
+            listitem=xbmcgui.ListItem(movdat['title'])
+            listitem.setInfo(type="Video", infoLabels={"Title":movdat['title']})
         else:
             flvxzurl='http://api.flvxz.com/site/youku/vid/' + playid + '/jsonp/purejson'
             data = GetHttpData(flvxzurl)
@@ -1887,13 +1877,13 @@ def play(vid):
                 xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
                 return
 
-            playlist = xbmc.PlayList(1)
-            playlist.clear()
+            playlist = 'stack://'
             for i in range(total):
-                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
-                listitem=xbmcgui.ListItem(title)
-                listitem.setInfo(type="Video",infoLabels={"Title":title})
-                playlist.add(files[i]['furl'], listitem)
+                playlist += files[i]['furl']
+                if i < total - 1:
+                    playlist += ' , '
+            listitem=xbmcgui.ListItem(movdat['title'])
+            listitem.setInfo(type="Video", infoLabels={"Title":movdat['title']})
 
         xbmc.executebuiltin( "Dialog.Close(busydialog)" )
         try:
@@ -1919,7 +1909,7 @@ def play(vid):
                 elif choice == -1:
                     return
                     
-        player.play(playlist, arg=history)
+        player.play(playlist, listitem, arg=history)
     except:
         xbmc.executebuiltin( "Dialog.Close(busydialog)" )
         xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
