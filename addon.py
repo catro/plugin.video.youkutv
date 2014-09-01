@@ -90,8 +90,6 @@ class MyPlayer(xbmc.Player):
         if offset > 0:
             item[startpos].setProperty('StartOffset', str(offset))
 
-        log('start from: %d' % self.last)
-
         t = threading.Timer(1, self.timeEntry)
         t.start()
 
@@ -111,22 +109,18 @@ class MyPlayer(xbmc.Player):
             pass
 
     def onPlayBackStarted(self):
-        log('onPlayBackStarted')
         self.updateHistory()
         xbmc.Player.onPlayBackStarted(self)
 
     def onPlayBackSeek(self, time, seekOffset):
-        log('onPlayBackSeek')
         self.updateHistory(False)
         xbmc.Player.onPlayBackSeek(self, time, seekOffset)
 
     def onPlayBackSeekChapter(self, chapter):
-        log('onPlayBackSeekChapter')
         self.updateHistory(False)
         xbmc.Player.onPlayBackSeek(self, chapter)
 
     def onPlayBackEnded(self):
-        log('onPlayBackEnded')
         try:
             cache.delete(self.vid)
         except:
@@ -144,7 +138,6 @@ class MyPlayer(xbmc.Player):
                 self.last = self.getTime()
                 self.bast = self.last
 
-            log('now: %d' % self.last)
             cache.set(self.vid, repr({'offset':self.last, 'startpos':xbmc.PlayList(1).getposition()}))
 
 
