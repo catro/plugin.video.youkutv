@@ -61,6 +61,7 @@ class MyPlayer(xbmc.Player):
     def __init__(self):
         self.vid = None
         self.myItem = ''
+        self.rollback = 3
         xbmc.Player.__init__(self)
 
     def play(self, item='', listitem=None, windowed=False, startpos=-1, arg=None):
@@ -69,9 +70,17 @@ class MyPlayer(xbmc.Player):
         self.vid = arg
         offset = 0
         startpos = 0
+        self.base = 0
+        self.last = 0
         try:
             ret = eval(cache.get(self.vid))
             offset = ret['offset']
+            if offset > self.rollback:
+                offset -= self.rollback
+            else:
+                offset = 0
+            self.base = offset
+            self.last = offset
             startpos = ret['startpos']
             if startpos >= item.size():
                 startpos = item.size() - 1
@@ -80,6 +89,8 @@ class MyPlayer(xbmc.Player):
 
         if offset > 0:
             item[startpos].setProperty('StartOffset', str(offset))
+
+        log('start from: %d' % self.last)
 
         t = threading.Timer(1, self.timeEntry)
         t.start()
@@ -100,27 +111,41 @@ class MyPlayer(xbmc.Player):
             pass
 
     def onPlayBackStarted(self):
+        log('onPlayBackStarted')
         self.updateHistory()
         xbmc.Player.onPlayBackStarted(self)
 
     def onPlayBackSeek(self, time, seekOffset):
-        self.updateHistory()
+        log('onPlayBackSeek')
+        self.updateHistory(False)
         xbmc.Player.onPlayBackSeek(self, time, seekOffset)
 
     def onPlayBackSeekChapter(self, chapter):
-        self.updateHistory()
+        log('onPlayBackSeekChapter')
+        self.updateHistory(False)
         xbmc.Player.onPlayBackSeek(self, chapter)
 
     def onPlayBackEnded(self):
+        log('onPlayBackEnded')
         try:
             cache.delete(self.vid)
         except:
             pass
         xbmc.Player.onPlayBackEnded(self)
 
-    def updateHistory(self):
+    def updateHistory(self, check=True):
         if self.isPlaying() == True:
-            cache.set(self.vid, repr({'offset':self.getTime(), 'startpos':xbmc.PlayList(1).getposition()}))
+            if check == True:
+                offset = self.getTime()
+                if (offset > self.base) and (offset < self.base + 1.5):
+                    self.last += offset - self.base
+                self.base = offset
+            else:
+                self.last = self.getTime()
+                self.bast = self.last
+
+            log('now: %d' % self.last)
+            cache.set(self.vid, repr({'offset':self.last, 'startpos':xbmc.PlayList(1).getposition()}))
 
 
 player = MyPlayer()
