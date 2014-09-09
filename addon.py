@@ -2179,11 +2179,15 @@ def log(msg):
 
 
 def readSettings():
-    settings['resolution'] = int(__addon__.getSetting('resolution')) 
-    settings['language'] = int(__addon__.getSetting('language')) 
-    settings['source'] = int(__addon__.getSetting('source')) 
-    settings['type'] = int(__addon__.getSetting('type')) 
-    registerHotKey(__addon__.getSetting('hotkey'))
+    try:
+        settings['resolution'] = int(__addon__.getSetting('resolution')) 
+        settings['language'] = int(__addon__.getSetting('language')) 
+        settings['source'] = int(__addon__.getSetting('source')) 
+        settings['type'] = int(__addon__.getSetting('type')) 
+        registerHotKey(__addon__.getSetting('hotkey'))
+    except:
+        __addon__.openSettings()
+        readSettings()
 
 
 def writeSettings():
