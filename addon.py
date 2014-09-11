@@ -146,7 +146,6 @@ class MyPlayer(xbmc.Player):
             else:
                 self.last = base
                 self.base = base
-            log(str(self.last))
 
             self.lastpos = xbmc.PlayList(1).getposition()
 
