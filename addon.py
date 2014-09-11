@@ -72,6 +72,7 @@ class MyPlayer(xbmc.Player):
         startpos = 0
         self.base = 0
         self.last = 0
+        self.lastpos = 0
         try:
             ret = eval(cache.get(self.vid))
             offset = ret['offset']
@@ -84,6 +85,7 @@ class MyPlayer(xbmc.Player):
             startpos = ret['startpos']
             if startpos >= item.size():
                 startpos = item.size() - 1
+            self.lastpos = startpos
         except:
             pass
 
@@ -109,11 +111,11 @@ class MyPlayer(xbmc.Player):
             pass
 
     def onPlayBackStarted(self):
-        self.updateHistory()
+        self.updateHistory(False)
         xbmc.Player.onPlayBackStarted(self)
 
     def onPlayBackSeek(self, time, seekOffset):
-        self.updateHistory(False)
+        self.updateHistory(False, time/1000)
         xbmc.Player.onPlayBackSeek(self, time, seekOffset)
 
     def onPlayBackSeekChapter(self, chapter):
@@ -127,19 +129,26 @@ class MyPlayer(xbmc.Player):
             pass
         xbmc.Player.onPlayBackEnded(self)
 
-    def updateHistory(self, check=True):
+    def onPlayBackStopped(self):
+        cache.set(self.vid, repr({'offset':self.last, 'startpos':self.lastpos}))
+
+
+    def updateHistory(self, check=True, base=-1):
         if self.isPlaying() == True:
             if check == True:
                 offset = self.getTime()
                 if (offset > self.base) and (offset < self.base + 1.5):
                     self.last += offset - self.base
                 self.base = offset
-            else:
+            elif base == -1:
                 self.last = self.getTime()
-                self.bast = self.last
+                self.base = self.last
+            else:
+                self.last = base
+                self.base = base
+            log(str(self.last))
 
-            cache.set(self.vid, repr({'offset':self.last, 'startpos':xbmc.PlayList(1).getposition()}))
-
+            self.lastpos = xbmc.PlayList(1).getposition()
 
 player = MyPlayer()
 
