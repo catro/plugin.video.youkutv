@@ -1586,6 +1586,7 @@ class DetailWindow(BaseWindow):
         setLabel(self.getControl(709), data, 'performer', u'未知', u'演员：', '', '/')
         self.getControl(710).setLabel('简介：')
         setLabel(self.getControl(711), data, 'desc', '', '', '', '')
+        xbmcgui.Window(xbmcgui.getCurrentWindowId()).setProperty('detail_pay', str(data.get('paid', 0)))
 
         self.getControl(721).setLabel('选集')
         added = True
