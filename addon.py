@@ -2178,7 +2178,7 @@ def registerHotKey(key='F12'):
             fp.close()
             return
     fp = open(keymap, 'w')
-    fp.write(r'<?xml version="1.0" encoding="UTF-8"?><keymap><global><keyboard><%s>RunScript(%s, openSetting)</%s></keyboard></global></keymap>' % (key, __addonid__, key))
+    fp.write(r'<?xml version="1.0" encoding="UTF-8"?><keymap><global><keyboard><%s>RunScript(%s, openSetting)</%s></keyboard><remote><mytv>RunScript(%s, openSetting)</mytv></remote></global></keymap>' % (key, __addonid__, key, __addonid__))
     fp.close()
     xbmc.executebuiltin('Action(reloadkeymaps)')
 
