@@ -60,19 +60,21 @@ ACTION_CONTEXT_MENU   = 117
 class MyPlayer(xbmc.Player):
     def __init__(self):
         self.vid = None
-        self.myItem = ''
         self.rollback = 3
         xbmc.Player.__init__(self)
 
     def play(self, item='', listitem=None, windowed=False, startpos=-1, arg=None):
 
-        self.myItem = item
         self.vid = arg
         offset = 0
         startpos = 0
         self.base = 0
         self.last = 0
         self.lastpos = 0
+        if item[0].getfilename() == m3u8_file:
+            self.isM3U8 = True
+        else:
+            self.isM3U8 = False
         try:
             ret = eval(cache.get(self.vid))
             offset = ret['offset']
@@ -135,12 +137,12 @@ class MyPlayer(xbmc.Player):
 
     def updateHistory(self, check=True, base=-1):
         if self.isPlaying() == True:
-            if check == True:
+            if check == True and self.isM3U8 == True:
                 offset = self.getTime()
                 if (offset > self.base) and (offset < self.base + 1.5):
                     self.last += offset - self.base
                 self.base = offset
-            elif base == -1:
+            elif base == -1 or self.isM3U8 == False:
                 self.last = self.getTime()
                 self.base = self.last
             else:
