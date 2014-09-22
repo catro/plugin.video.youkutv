@@ -1975,9 +1975,12 @@ def play(vid, playContinue=False):
             listitem.setInfo(type="Video", infoLabels={"Title":movdat['title']})
             playlist.add('stack://' + ' , '.join(foobars[:-1]), listitem)
     elif settings_data['source'][settings['source']] == 'flvxz':
-        flvxzurl='http://api.flvxz.com/site/youku/vid/' + playid + '/jsonp/purejson'
+        flvxzurl='http://api.flvxz.com/token/7eb09609f912fe02bcc9b67d9d0efb42/site/youku/vid/' + playid + '/jsonp/purejson'
         data = GetHttpData(flvxzurl)
-        data = json.loads(data)
+        try:
+            data = json.loads(data)
+        except:
+            data = ''
 
         if len(data) == 0:
             xbmc.executebuiltin( "Dialog.Close(busydialog)" )
