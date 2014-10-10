@@ -18,7 +18,8 @@ sys.path.append (__resource__)
 cache = StorageServer.StorageServer(__addonid__, 87600)
 m3u8_file = __cwd__ + '/v.m3u8'
 HOST='http://tv.api.3g.youku.com/'
-IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39cab341ead7b2aa90f9caf&ver=2.3.0'
+#IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39cab341ead7b2aa90f9caf&ver=2.3.0'
+IDS='pid=0ce22bfd5ef5d2c5&guid=12d60728bd267e3e0b6ab4d124d6c5f0&ngdid=357e71ee78debf7340d29408b88c85c4&ver=2.6.0&operator=T-Mobile_310260&network=WIFI&launcher=0'
 Navigation=['首页', '频道', '排行']
 ContentID=[520, 560, 580]
 TopData=['播放排行榜', '搜索排行榜', '特色排行榜']
@@ -32,6 +33,7 @@ ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
              '84': {'icon': 'channel_documentary_icon.png', 'title': '纪录片'},\
              '87': {'icon': 'channel_education_icon.png', 'title': '教育'},\
              }
+mainData = [{'title': '搜索', 'image': 'yk_search.jpg', 'mtype': 'search'},  {'title': '观看记录', 'image': 'yk_history.jpg', 'mtype': 'history'}, {'title': '收藏', 'image': 'yk_favor.jpg', 'mtype': 'favor'}]
 
 
 ACTION_MOVE_LEFT      = 1
@@ -546,7 +548,8 @@ class MainWindow(BaseWindow):
         if data['status'] != 'success':
             return
 
-        for item in data['results']['m1']:
+        #for item in data['results']['m1']:
+        for item in mainData:
             listitem = xbmcgui.ListItem(label=item['title'], thumbnailImage=item['image'])
             setProperties(listitem, item)
             self.getControl(521).addItem(listitem)
