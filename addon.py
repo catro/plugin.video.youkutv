@@ -23,7 +23,7 @@ IDS='pid=0ce22bfd5ef5d2c5&guid=12d60728bd267e3e0b6ab4d124d6c5f0&ngdid=357e71ee78
 Navigation=['首页', '频道', '排行']
 ContentID=[520, 560, 580]
 TopData=['播放排行榜', '搜索排行榜', '特色排行榜']
-settings_data = {'resolution': ['super', 'super', 'high', 'high'], 'type':[u'1080P', u'超清', u'高清', u'FLV标清'], 'm3u8':['hd3', 'hd2', 'mp4', 'flv'], 'langid':[0, 1, 2, 6], 'language':['默认', '国语', '粤语', '英语'], 'source':['flvxz', 'flvcd', 'm3u8']}
+settings_data = {'resolution': ['super', 'super', 'high', 'high'], 'type':[u'1080P', u'超清', u'高清', u'标清'], 'flvxz':[u'分段_1080P_FLV', u'分段_超清_FLV', u'分段_高清_MP4', u'分段_标清_FLV'], 'm3u8':['hd3', 'hd2', 'mp4', 'flv'], 'langid':[0, 1, 2, 6], 'language':['默认', '国语', '粤语', '英语'], 'source':['flvxz', 'flvcd', 'm3u8']}
 settings={'resolution':0, 'language':0, 'source':0, 'type':0}
 ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
              '669': {'icon': 'channel_child_icon.png', 'title': '少儿'},\
@@ -1994,7 +1994,7 @@ def play(vid, playContinue=False):
         files = []
         for quality in range(settings['resolution'], len(settings_data['resolution'])):
             for item in data:
-                if item['quality'] == settings_data['type'][quality]:
+                if item['quality'] == settings_data['flvxz'][quality]:
                     files = item['files']
                     break
             if len(files) > 0:
