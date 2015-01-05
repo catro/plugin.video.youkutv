@@ -55,7 +55,7 @@
                     <aspectratio>stretch</aspectratio>
                 </control>    
                 <control type="label">
-                    <posx>119</posx>
+                    <posx>0</posx>
                     <posy>120</posy>
                     <width>208</width>
                     <height>60</height>   
@@ -85,7 +85,7 @@
                     <aspectratio>stretch</aspectratio>
                 </control>     
                 <control type="label">
-                    <posx>119</posx>
+                    <posx>0</posx>
                     <posy>120</posy>
                     <width>208</width>
                     <height>60</height>   

@@ -73,7 +73,7 @@
                     <aspectratio>stretch</aspectratio>
                 </control>    
                 <control type="label">
-                    <posx>100</posx>
+                    <posx>0</posx>
                     <posy>0</posy>
                     <width>200</width>
                     <height>65</height>   
@@ -104,7 +104,7 @@
                     <aspectratio>stretch</aspectratio>
                 </control>    
                 <control type="label">
-                    <posx>100</posx>
+                    <posx>0</posx>
                     <posy>0</posy>
                     <width>200</width>
                     <height>65</height>   
@@ -140,7 +140,7 @@
                     <aspectratio>stretch</aspectratio>
                 </control>    
                 <control type="label">
-                    <posx>90</posx>
+                    <posx>0</posx>
                     <posy>240</posy>
                     <width>160</width>
                     <height>60</height>   
@@ -152,13 +152,13 @@
                     <info>ListItem.Label</info>
                 </control>
                 <control type="label">
-                    <posx>155</posx>
+                    <posx>140</posx>
                     <posy>230</posy>
                     <width>60</width>
                     <height>20</height>   
                     <font>font12</font>
                     <textcolor>red</textcolor>
-                    <align>center</align>
+                    <align>left</align>
                     <aligny>center</aligny>
                     <info>ListItem.Label2</info>
                 </control>
@@ -181,18 +181,18 @@
                     <aspectratio>stretch</aspectratio>
                 </control>    
                 <control type="label">
-                    <posx>155</posx>
+                    <posx>140</posx>
                     <posy>230</posy>
                     <width>60</width>
                     <height>20</height>   
                     <font>font12</font>
                     <textcolor>red</textcolor>
-                    <align>center</align>
+                    <align>left</align>
                     <aligny>center</aligny>
                     <info>ListItem.Label2</info>
                 </control>
                 <control type="label">
-                    <posx>90</posx>
+                    <posx>0</posx>
                     <posy>240</posy>
                     <width>160</width>
                     <height>60</height>   

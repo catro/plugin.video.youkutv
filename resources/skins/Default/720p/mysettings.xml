@@ -119,7 +119,7 @@
                 <ondown>1721</ondown>
                 <itemlayout width="128" height="40">
                     <control type="label">
-                        <posx>64</posx>
+                        <posx>0</posx>
                         <posy>0</posy>
                         <width>128</width>
                         <height>40</height>   
@@ -141,7 +141,7 @@
                         <texture>filter-select.png</texture>
                     </control>
                     <control type="label">
-                        <posx>64</posx>
+                        <posx>0</posx>
                         <posy>0</posy>
                         <width>128</width>
                         <height>40</height>   
@@ -166,7 +166,7 @@
                 <ondown>1722</ondown>
                 <itemlayout width="128" height="40">
                     <control type="label">
-                        <posx>64</posx>
+                        <posx>0</posx>
                         <posy>0</posy>
                         <width>128</width>
                         <height>40</height>   
@@ -188,7 +188,7 @@
                         <texture>filter-select.png</texture>
                     </control>
                     <control type="label">
-                        <posx>64</posx>
+                        <posx>0</posx>
                         <posy>0</posy>
                         <width>128</width>
                         <height>40</height>   
@@ -212,7 +212,7 @@
                 <onup>1721</onup>
                 <itemlayout width="128" height="40">
                     <control type="label">
-                        <posx>64</posx>
+                        <posx>0</posx>
                         <posy>0</posy>
                         <width>128</width>
                         <height>40</height>   
@@ -234,7 +234,7 @@
                         <texture>filter-select.png</texture>
                     </control>
                     <control type="label">
-                        <posx>64</posx>
+                        <posx>0</posx>
                         <posy>0</posy>
                         <width>128</width>
                         <height>40</height>   

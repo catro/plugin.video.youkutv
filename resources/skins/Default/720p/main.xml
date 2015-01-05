@@ -125,7 +125,7 @@
                             <aspectratio>stretch</aspectratio>
                         </control>    
                         <control type="label">
-                            <posx>160</posx>
+                            <posx>0</posx>
                             <posy>100</posy>
                             <width>156</width>
                             <height>60</height>   
@@ -147,7 +147,7 @@
                             <aspectratio>stretch</aspectratio>
                         </control>    
                         <control type="label">
-                            <posx>160</posx>
+                            <posx>0</posx>
                             <posy>100</posy>
                             <width>156</width>
                             <height>60</height>   
@@ -188,7 +188,7 @@
                             <aspectratio>stretch</aspectratio>
                         </control>    
                         <control type="label">
-                            <posx>280</posx>
+                            <posx>0</posx>
                             <posy>396</posy>
                             <width>276</width>
                             <height>60</height>   
@@ -210,7 +210,7 @@
                             <aspectratio>stretch</aspectratio>
                         </control>    
                         <control type="label">
-                            <posx>280</posx>
+                            <posx>0</posx>
                             <posy>396</posy>
                             <width>276</width>
                             <height>60</height>   
@@ -258,7 +258,7 @@
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                             <control type="label">
-                                <posx>320</posx>
+                                <posx>0</posx>
                                 <posy>140</posy>
                                 <width>316</width>
                                 <height>60</height>   
@@ -280,7 +280,7 @@
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                             <control type="label">
-                                <posx>320</posx>
+                                <posx>0</posx>
                                 <posy>140</posy>
                                 <width>316</width>
                                 <height>60</height>   
@@ -322,7 +322,7 @@
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                             <control type="label">
-                                <posx>158</posx>
+                                <posx>0</posx>
                                 <posy>210</posy>
                                 <width>154</width>
                                 <height>60</height>   
@@ -344,7 +344,7 @@
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                             <control type="label">
-                                <posx>158</posx>
+                                <posx>0</posx>
                                 <posy>210</posy>
                                 <width>154</width>
                                 <height>60</height>   
@@ -393,7 +393,7 @@
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                             <control type="label">
-                                <posx>320</posx>
+                                <posx>0</posx>
                                 <posy>140</posy>
                                 <width>316</width>
                                 <height>60</height>   
@@ -415,7 +415,7 @@
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                             <control type="label">
-                                <posx>320</posx>
+                                <posx>0</posx>
                                 <posy>140</posy>
                                 <width>316</width>
                                 <height>60</height>   
@@ -457,7 +457,7 @@
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                             <control type="label">
-                                <posx>158</posx>
+                                <posx>0</posx>
                                 <posy>210</posy>
                                 <width>154</width>
                                 <height>60</height>   
@@ -479,7 +479,7 @@
                                 <aspectratio>stretch</aspectratio>
                             </control>    
                             <control type="label">
-                                <posx>158</posx>
+                                <posx>0</posx>
                                 <posy>210</posy>
                                 <width>154</width>
                                 <height>60</height>   
@@ -521,7 +521,7 @@
                         <aspectratio>stretch</aspectratio>
                     </control>    
                     <control type="label">
-                        <posx>214</posx>
+                        <posx>-5</posx>
                         <posy>170</posy>
                         <width>220</width>
                         <height>60</height>   
@@ -543,7 +543,7 @@
                         <aspectratio>stretch</aspectratio>
                     </control>    
                     <control type="label">
-                        <posx>214</posx>
+                        <posx>-5</posx>
                         <posy>170</posy>
                         <width>220</width>
                         <height>60</height>   
@@ -582,7 +582,7 @@
                         <aspectratio>stretch</aspectratio>
                     </control>    
                     <control type="label">
-                        <posx>240</posx>
+                        <posx>0</posx>
                         <posy>400</posy>
                         <width>340</width>
                         <height>60</height>   
@@ -604,7 +604,7 @@
                         <aspectratio>stretch</aspectratio>
                     </control>    
                     <control type="label">
-                        <posx>240</posx>
+                        <posx>0</posx>
                         <posy>400</posy>
                         <width>340</width>
                         <height>60</height>   

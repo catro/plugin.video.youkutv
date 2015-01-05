@@ -60,7 +60,7 @@
                     <aspectratio>stretch</aspectratio>
                 </control>    
                 <control type="label">
-                    <posx>100</posx>
+                    <posx>0</posx>
                     <posy>0</posy>
                     <width>200</width>
                     <height>65</height>   
@@ -91,7 +91,7 @@
                     <aspectratio>stretch</aspectratio>
                 </control>    
                 <control type="label">
-                    <posx>100</posx>
+                    <posx>0</posx>
                     <posy>0</posy>
                     <width>200</width>
                     <height>65</height>   
@@ -126,7 +126,7 @@
                     <aspectratio>stretch</aspectratio>
                 </control>    
                 <control type="label">
-                    <posx>90</posx>
+                    <posx>0</posx>
                     <posy>240</posy>
                     <width>160</width>
                     <height>60</height>   
@@ -178,7 +178,7 @@
                     <info>ListItem.Label2</info>
                 </control>
                 <control type="label">
-                    <posx>90</posx>
+                    <posx>0</posx>
                     <posy>240</posy>
                     <width>160</width>
                     <height>60</height>   
