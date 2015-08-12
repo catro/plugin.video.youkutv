@@ -13,27 +13,39 @@ __addon__ = xbmcaddon.Addon(id=__addonid__)
 __cwd__ = __addon__.getAddonInfo('path')
 __profile__    = xbmc.translatePath( __addon__.getAddonInfo('profile') )
 __resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' ) )
-socket.setdefaulttimeout(10) 
 sys.path.append (__resource__)
 cache = StorageServer.StorageServer(__addonid__, 87600)
 m3u8_file = __cwd__ + '/v.m3u8'
-HOST='http://tv.api.3g.youku.com/'
-#IDS='pid=0dd34e6431923a46&guid=46a51fe8d8e37731535bade1e6b8ae96&gdid=dab5d487f39cab341ead7b2aa90f9caf&ver=2.3.0'
-IDS='pid=0ce22bfd5ef5d2c5&guid=12d60728bd267e3e0b6ab4d124d6c5f0&ngdid=357e71ee78debf7340d29408b88c85c4&ver=2.6.0&operator=T-Mobile_310260&network=WIFI&launcher=0'
-Navigation=['首页', '频道', '排行']
-ContentID=[520, 560, 580]
+
+#Set timeout of socket
+socket.setdefaulttimeout(10) 
+
+#URL base
+HOST = 'http://tv.api.3g.youku.com/'
+IDS = 'pid=0ce22bfd5ef5d2c5&guid=12d60728bd267e3e0b6ab4d124d6c5f0&ngdid=357e71ee78debf7340d29408b88c85c4&ver=2.6.0&operator=T-Mobile_310260&network=WIFI&launcher=0'
+
+#Fixed tabs
+Navigation  = ['首页', '频道', '排行']
+ContentID   = [520, 560, 580]
 TopData=['播放排行榜', '搜索排行榜', '特色排行榜']
-settings_data = {'resolution': ['super', 'super', 'high', 'high'], 'type':[u'1080P', u'超清', u'高清', u'标清'], 'flvxz':[u'分段_1080P_FLV', u'分段_超清_FLV', u'分段_高清_MP4', u'分段_标清_FLV'], 'm3u8':['hd3', 'hd2', 'mp4', 'flv'], 'langid':[0, 1, 2, 6], 'language':['默认', '国语', '粤语', '英语'], 'source':['flvxz', 'flvcd', 'm3u8']}
-settings={'resolution':0, 'language':0, 'source':0, 'type':0}
-ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},\
-             '669': {'icon': 'channel_child_icon.png', 'title': '少儿'},\
-             '96': {'icon': 'channel_movie_icon.png', 'title': '电影'},\
-             '100': {'icon': 'channel_anime_icon.png', 'title': '动漫'},\
-             '85': {'icon': 'channel_variety_icon.png', 'title': '综艺'},\
-             '84': {'icon': 'channel_documentary_icon.png', 'title': '纪录片'},\
-             '87': {'icon': 'channel_education_icon.png', 'title': '教育'},\
+ChannelData={'97': {'icon': 'channel_tv_icon.png', 'title': '电视剧'},
+             '669': {'icon': 'channel_child_icon.png', 'title': '少儿'},
+             '96': {'icon': 'channel_movie_icon.png', 'title': '电影'},
+             '100': {'icon': 'channel_anime_icon.png', 'title': '动漫'},
+             '85': {'icon': 'channel_variety_icon.png', 'title': '综艺'},
+             '84': {'icon': 'channel_documentary_icon.png', 'title': '纪录片'},
+             '87': {'icon': 'channel_education_icon.png', 'title': '教育'},
              }
-mainData = [{'title': '搜索', 'image': 'yk_search.jpg', 'mtype': 'search'},  {'title': '观看记录', 'image': 'yk_history.jpg', 'mtype': 'history'}, {'title': '收藏', 'image': 'yk_favor.jpg', 'mtype': 'favor'}]
+mainData = [{'title': '搜索', 'image': 'yk_search.jpg', 'mtype': 'search'},  
+            {'title': '观看记录', 'image': 'yk_history.jpg', 'mtype': 'history'}, 
+            {'title': '收藏', 'image': 'yk_favor.jpg', 'mtype': 'favor'}]
+settings_data = {'resolution':[u'1080P', u'超清', u'高清', u'标清'], 
+                 'resolution_type':['hd3', 'hd2', 'mp4', 'flv'], 
+                 'language':['默认', '国语', '粤语', '英语'], 
+                 'language_type':[0, 1, 2, 6], 
+                 'play':['分段', '堆叠', 'M3U8'],
+                 'play_type':['list', 'stack', 'm3u8']}
+settings={'resolution':0, 'language':0, 'play':0}
 
 
 ACTION_MOVE_LEFT      = 1
@@ -235,9 +247,9 @@ class ConfirmWindow(BaseWindowDialog):
 
 class SettingsWindow(xbmcgui.WindowXMLDialog):
     def __init__( self, *args, **kwargs):
-        self.resolutionType = settings['resolution']
-        self.langid = settings['language']
-        self.source = settings['source']
+        self.resolution = settings['resolution']
+        self.language = settings['language']
+        self.play = settings['play']
         self.inited = False
         #BaseWindowDialog.__init__( self )
         xbmcgui.WindowXMLDialog.__init__(self)
@@ -254,8 +266,8 @@ class SettingsWindow(xbmcgui.WindowXMLDialog):
             return
 
         selected = 0
-        for i in range(len(settings_data['type'])):
-            listitem = xbmcgui.ListItem(label=settings_data['type'][i])
+        for i in range(len(settings_data['resolution'])):
+            listitem = xbmcgui.ListItem(label=settings_data['resolution'][i])
             self.getControl(1720).addItem(listitem)
             if settings['resolution'] == i:
                 listitem.select(True)
@@ -266,16 +278,16 @@ class SettingsWindow(xbmcgui.WindowXMLDialog):
         for i in range(len(settings_data['language'])):
             listitem = xbmcgui.ListItem(label=settings_data['language'][i])
             self.getControl(1721).addItem(listitem)
-            if settings['language'] == settings_data['langid'][i]:
+            if settings['language'] == i:
                 listitem.select(True)
                 selected = i
         self.getControl(1721).selectItem(selected)
 
         selected = 0
-        for i in range(len(settings_data['source'])):
-            listitem = xbmcgui.ListItem(label=settings_data['source'][i])
+        for i in range(len(settings_data['play'])):
+            listitem = xbmcgui.ListItem(label=settings_data['play'][i])
             self.getControl(1722).addItem(listitem)
-            if settings['source'] == i:
+            if settings['play'] == i:
                 listitem.select(True)
                 selected = i
         self.getControl(1722).selectItem(selected)
@@ -291,22 +303,22 @@ class SettingsWindow(xbmcgui.WindowXMLDialog):
                     self.getControl(controlId).getListItem(index).select(False)
             self.getControl(controlId).getSelectedItem().select(True)
             if controlId == 1720:
-                self.resolutionType = self.getControl(controlId).getSelectedPosition()
+                self.resolution = self.getControl(controlId).getSelectedPosition()
             elif controlId == 1721:
-                self.langid = settings_data['langid'][self.getControl(controlId).getSelectedPosition()]
+                self.language = self.getControl(controlId).getSelectedPosition()
             else:
-                self.source = self.getControl(controlId).getSelectedPosition()
+                self.play = self.getControl(controlId).getSelectedPosition()
 
 
     def onClick( self, controlId ):
         if controlId == 1710:
-            self.resolutionType = 0
-            self.langid = 0
-            self.source = 0
+            self.resolution = 0
+            self.language = 0
+            self.play = 0
 
-        settings['resolution'] = self.resolutionType
-        settings['language'] = self.langid
-        settings['source'] = self.source
+        settings['resolution'] = self.resolution
+        settings['language'] = self.language
+        settings['play'] = self.play
         writeSettings()
         if player.isPlaying():
             play(cache.get('currentVID'), True)
@@ -1945,85 +1957,88 @@ def play(vid, playContinue=False):
     #Set language
     if settings['language'] != 0 and movdat.has_key('dvd') and 'audiolang' in movdat['dvd']:
         for item in movdat['dvd']['audiolang']:
-            if item['langid'] == settings['language']:
+            if item['language'] == settings_data[settings['language']]:
                 if item['vid'] != vid:
                     playid = item['vid']
 
-    #Get url from www.flvcd.com
-    if settings_data['source'][settings['source']] == 'flvcd':
-        flvcdurl='http://www.flvcd.com/parse.php?format=' + settings_data['resolution'][settings['resolution']] + '&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+playid+'.html')
-        result = GetHttpData(flvcdurl)
-        foobars = re.compile('<input type="hidden" name="inf" value="(.*)/>', re.M).findall(result)
-        if len(foobars) < 1:
-            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-            xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
-            return
-        foobars = foobars[0].split('|')
-        for total in range(0,len(foobars)):
-            if foobars[total][:4] != 'http':
-                total -= 1
-                break
-        total += 1
+#    #Get url from www.flvcd.com
+#    if settings_data['source'][settings['source']] == 'flvcd':
+#        flvcdurl='http://www.flvcd.com/parse.php?format=' + settings_data['resolution'][settings['resolution']] + '&kw='+urllib.quote_plus('http://v.youku.com/v_show/id_'+playid+'.html')
+#        result = GetHttpData(flvcdurl)
+#        foobars = re.compile('<input type="hidden" name="inf" value="(.*)/>', re.M).findall(result)
+#        if len(foobars) < 1:
+#            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
+#            xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
+#            return
+#        foobars = foobars[0].split('|')
+#        for total in range(0,len(foobars)):
+#            if foobars[total][:4] != 'http':
+#                total -= 1
+#                break
+#        total += 1
+#
+#        playlist = xbmc.PlayList(1)
+#        playlist.clear()
+#        if settings['type'] == 0:
+#            for i in range(total):
+#                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
+#                listitem=xbmcgui.ListItem(title)
+#                listitem.setInfo(type="Video",infoLabels={"Title":title})
+#                playlist.add(foobars[i], listitem)
+#        elif settings['type'] == 1:
+#            listitem=xbmcgui.ListItem(movdat['title'])
+#            listitem.setInfo(type="Video", infoLabels={"Title":movdat['title']})
+#            playlist.add('stack://' + ' , '.join(foobars[:-1]), listitem)
+#    elif settings_data['source'][settings['source']] == 'flvxz':
+#        flvxzurl='http://api.flvxz.com/token/7eb09609f912fe02bcc9b67d9d0efb42/site/youku/vid/' + playid + '/jsonp/purejson'
+#        data = GetHttpData(flvxzurl)
+#        try:
+#            data = json.loads(data)
+#        except:
+#            data = ''
+#
+#        if len(data) == 0:
+#            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
+#            xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
+#            return
+#
+#        #Find matched resolution
+#        files = []
+#        for quality in range(settings['resolution'], len(settings_data['resolution'])):
+#            for item in data:
+#                if item['quality'] == settings_data['flvxz'][quality]:
+#                    files = item['files']
+#                    break
+#            if len(files) > 0:
+#                break
+#
+#        total = len(files)
+#        if total == 0:
+#            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
+#            xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
+#            return
+#
+#        playlist = xbmc.PlayList(1)
+#        playlist.clear()
+#        if settings['type'] == 0:
+#            for i in range(total):
+#                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
+#                listitem=xbmcgui.ListItem(title)
+#                listitem.setInfo(type="Video",infoLabels={"Title":title})
+#                playlist.add(files[i]['furl'], listitem)
+#                
+#        elif settings['type'] == 1:
+#            playurl = 'stack://'
+#            for i in range(total):
+#                playurl += files[i]['furl']
+#                if i < total - 1:
+#                    playurl += ' , '
+#            listitem=xbmcgui.ListItem(movdat['title'])
+#            listitem.setInfo(type="Video", infoLabels={"Title":movdat['title']})
+#            playlist.add(playurl, listitem)
 
-        playlist = xbmc.PlayList(1)
-        playlist.clear()
-        if settings['type'] == 0:
-            for i in range(total):
-                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
-                listitem=xbmcgui.ListItem(title)
-                listitem.setInfo(type="Video",infoLabels={"Title":title})
-                playlist.add(foobars[i], listitem)
-        elif settings['type'] == 1:
-            listitem=xbmcgui.ListItem(movdat['title'])
-            listitem.setInfo(type="Video", infoLabels={"Title":movdat['title']})
-            playlist.add('stack://' + ' , '.join(foobars[:-1]), listitem)
-    elif settings_data['source'][settings['source']] == 'flvxz':
-        flvxzurl='http://api.flvxz.com/token/7eb09609f912fe02bcc9b67d9d0efb42/site/youku/vid/' + playid + '/jsonp/purejson'
-        data = GetHttpData(flvxzurl)
-        try:
-            data = json.loads(data)
-        except:
-            data = ''
-
-        if len(data) == 0:
-            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-            xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
-            return
-
-        #Find matched resolution
-        files = []
-        for quality in range(settings['resolution'], len(settings_data['resolution'])):
-            for item in data:
-                if item['quality'] == settings_data['flvxz'][quality]:
-                    files = item['files']
-                    break
-            if len(files) > 0:
-                break
-
-        total = len(files)
-        if total == 0:
-            xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-            xbmcgui.Dialog().ok('提示框', '解析地址异常，无法播放')
-            return
-
-        playlist = xbmc.PlayList(1)
-        playlist.clear()
-        if settings['type'] == 0:
-            for i in range(total):
-                title =movdat['title'] + u" - 第"+str(i+1)+"/"+str(total) + u"节"
-                listitem=xbmcgui.ListItem(title)
-                listitem.setInfo(type="Video",infoLabels={"Title":title})
-                playlist.add(files[i]['furl'], listitem)
-                
-        elif settings['type'] == 1:
-            playurl = 'stack://'
-            for i in range(total):
-                playurl += files[i]['furl']
-                if i < total - 1:
-                    playurl += ' , '
-            listitem=xbmcgui.ListItem(movdat['title'])
-            listitem.setInfo(type="Video", infoLabels={"Title":movdat['title']})
-            playlist.add(playurl, listitem)
+    if False:
+        pass
     else:
         #m3u8
         if not playid == vid:
@@ -2046,7 +2061,7 @@ def play(vid, playContinue=False):
         elif resolution > 2:
             resolution = 2
         query = urllib.urlencode(dict(
-            vid=playid, ts=int(time.time()), keyframe=1, type=settings_data['m3u8'][resolution],
+            vid=playid, ts=int(time.time()), keyframe=1, type=settings_data['resolution_type'][resolution],
             ep=ep, oip=oip, ctype=12, ev=1, token=token, sid=sid,
         ))
         url = 'http://pl.youku.com/playlist/m3u8?%s' % (query)
@@ -2199,8 +2214,7 @@ def readSettings():
     try:
         settings['resolution'] = int(__addon__.getSetting('resolution')) 
         settings['language'] = int(__addon__.getSetting('language')) 
-        settings['source'] = int(__addon__.getSetting('source')) 
-        settings['type'] = int(__addon__.getSetting('type')) 
+        settings['play'] = int(__addon__.getSetting('play')) 
         registerHotKey(__addon__.getSetting('hotkey'))
     except:
         __addon__.openSettings()
@@ -2210,8 +2224,7 @@ def readSettings():
 def writeSettings():
     __addon__.setSetting('resolution', str(settings['resolution']))
     __addon__.setSetting('language', str(settings['language']))
-    __addon__.setSetting('source', str(settings['source']))
-    __addon__.setSetting('type', str(settings['type']))
+    __addon__.setSetting('play', str(settings['play']))
 
 
 def clearHistory():
