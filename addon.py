@@ -2,7 +2,7 @@
 # default.py
 
 import xbmcgui, xbmcaddon, xbmc
-import json, sys, urllib, urllib2, gzip, StringIO, re, os, time, threading, socket, base64, math
+import json, sys, urllib, urllib2, gzip, StringIO, re, os, time, threading, socket, base64, math, cookielib
 try:
    import StorageServer
 except:
@@ -2247,4 +2247,7 @@ try:
         openWindow('mysettings')
 except:
     if __name__ == '__main__':
+        cj = cookielib.CookieJar()
+        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        urllib2.install_opener(opener)
         openWindow('main')
