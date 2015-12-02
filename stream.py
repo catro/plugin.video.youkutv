@@ -1,74 +1,134 @@
 # -*- coding: utf-8 -*-
 
-import socket, select, threading
+import socket, select, threading, urllib2
 
-BIND_ADDRESS = '127.0.0.1'
-STREAM_ADDRESS = BIND_ADDRESS
-TIMEOUT = 30
+BIND_ADDRESS = '0.0.0.0'
+STREAM_ADDRESS = '127.0.0.1'
+TIMEOUT = 5
+MSS = 1440
 
 class StreamServer():
     def __init__(self):
         pass
 
+    def getSizes(self, urls):
+        infos = []
+        threads = []
+
+        #Get header concurrently. 
+        for url in  urls:
+            infos.append([])
+            t = threading.Thread(target = self.getInfo, args = [url, infos[-1]])
+            t.start()
+            threads.append(t)
+
+        for t in threads:
+            t.join()
+
+        if len(infos) == 0:
+            return [], ''
+
+        sizes = []
+        for info in infos:
+            if len(info) == 0:
+                return [], ''
+            sizes.append(int(info[0]['content-length']))
+
+        return sizes, infos[0][0]['content-type']
+
+    def getInfo(self, url, info):
+        #Get header
+        request = urllib2.Request(url)
+        request.get_method = lambda : 'HEAD'
+        response = urllib2.urlopen(request)
+
+        #Check return code
+        if response.getcode() == 200:
+            info.append(response.info())
+
+
     def start(self, urls):
         #Create a stream server. 
-        stream = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        stream.bind((BIND_ADDRESS, 0))
-        stream.listen(1)
-        port = stream.getsockname()[1]
+        server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        server.bind((BIND_ADDRESS, 0))
+        server.listen(1)
+        server.setblocking(False)
+        port = server.getsockname()[1]
+
+        #Get sizes
+        sizes, content_type = self.getSizes(urls)
 
         #Start to accepting
-        threading.Thread(target = self.run, args = [stream]).start()
+        threading.Thread(target = self.run, args = [server, sizes, content_type]).start()
         return 'http://%s:%d' % (STREAM_ADDRESS, port)
 
-    def run(self, stream):
-        #Wait for connection
-        readable, _, _ = select.select([stream], [], [], TIMEOUT)
-        if not (readable):
-            stream.close()
-            return
+    def processHEAD(self, stream, content_type, content_length):
+        #Send response to HEAD request
+        stream.send('HTTP/1.1 200 OK\r\n'
+                   'Content-Type: %s\r\n'
+                   'Accept-Ranges: bytes\r\n'
+                   'Content-Length: %d\r\n'
+                   'Connection: close\r\n\r\n' % (content_type, content_length))
 
-        stream.setblocking(False)
-        socks = [stream]
+    def run(self, server, sizes, content_type):
+        #Calculate the total size
+        total_size = 0
+        for size in  sizes:
+            total_size += size
 
-        while socks:
-            readable, _, _ = select.select(socks, socks, socks)
+        stream = None
+        agent = None
+        inputs = [server]
 
-            for s in readable:
-                if s is stream:
-                    #conn.close()
-                    conn, _ = stream.accept()
-                    conn.setblocking(False)
-                    print 'Accept from ', conn.getpeername()
-                    socks.append(conn)
-                else:
-                    data = s.recv(1500)
-                    if data:
-                        print 'Receive data (%d) from %s' % (len(data), s.getpeername())
-                    else:
-                        print 'Disconnect from ', s.getpeername()
-                        socks.remove(s)
-                        s.close()
-                        if stream in socks:
-                            socks.remove(stream)
+        while True:
+            readable, _, _ = select.select(inputs, [], [], TIMEOUT)
 
-        stream.close()
+            #Check timeouts
+            if not readable and len(inputs) == 1:
+                server.close()
+                return
+
+            if server in  readable:
+                #New connection from client. Close previous connection. 
+                if stream in inputs:
+                    inputs.remove(stream)
+                    stream.close()
+                    stream = None
+                stream, _ = server.accept()
+                stream.setblocking(False)
+                print 'Accept from ', stream.getpeername()
+                inputs.append(stream)
+
+            if stream in readable:
+                #Data from client
+                try:
+                    data = stream.recv(MSS)
+                    if not data:
+                        raise
+                    print 'Receive data (%d) from %s' % (len(data), stream.getpeername())
+                    if data[:4].upper() == 'HEAD':
+                        self.processHEAD(stream, content_type, total_size)
+                except:
+                    print 'Disconnect from ', stream.getpeername()
+                    inputs.remove(stream)
+                    stream.close()
+                    stream = None
+
 
 if __name__ == '__main__':
-    urls = ["http://61.160.198.173/6775E110ADF4582C5666164999/0300010F00565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://221.228.249.84/6574E6387AE3D8371AEDEC5EAF/0300010F01565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://61.160.198.134/6979CC708983B825D1301E40A5/0300010F02565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://222.73.61.242/697AC74868F49816539D2561EC/0300010F03565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://202.102.93.180/6779CC70B5A31814585D232996/0300010F04565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://222.73.245.131/677AC74852B4E81817BEAB4731/0300010F05565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://222.73.61.210/6579CC7054146815656DF85210/0300010F06565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://61.160.227.19/677DB7D08314382B0FE28E3C22/0300010F08565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://222.73.61.235/69810A858A4A4A816A2FD5463A3/0300010F09565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://202.102.88.215/69811A330B464581CD1393E4914/0300010F0A565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://61.160.198.85/698129E08EF6368228E902C6E40/0300010F0B565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://222.73.61.182/657FAD805D24581516047A31C6/0300010F0C565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://221.228.249.85/678129E087E04B843F68C20255E/0300010F0D565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts",
-            "http://101.226.184.18/6781398E058F498417DF62560F8/0300010F0E565D1FE3C56F2BEEFCF901BB750B-7814-8BB7-FAD0-3F9AB238B46E.flv.ts"]
+    urls = ["http://103.192.253.24/6971F4187A5308248F216A65CB/0300010C00565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://101.226.184.77/6972329BBED3E8377C9087529A/0300010C01565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://220.189.221.181/6972711EB2E4183100805331A7/0300010C02565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://202.102.93.179/6972AFA1AB63681676E9DB30FE/0300010C03565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://61.160.205.15/6772711E750408291565783B82/0300010C04565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://222.73.61.176/6772AFA1DE04281427E1105AF4/0300010C05565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://101.226.184.25/6572711E4F54783FAC43B3295D/0300010C06565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://202.102.74.49/6572AFA16F94E8209D3BB02FB0/0300010C07565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://61.160.198.171/6572EE24EAF4982EF2158E6968/0300010C08565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://101.226.184.53/6773A9ADB814383C08D9563EF0/0300010C09565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://202.102.93.171/6773E830B184281B8CFFCB5638/0300010C0A565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
+            "http://59.63.171.16/677426B371E377EB9BD786CD0/0300010C0B565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts"
+            ]
     ss = StreamServer()
-    url = ss.start(urls)
-    print(url)
+    print(ss.start(urls))
+    #print(ss.getSizes(urls))
