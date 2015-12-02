@@ -4,8 +4,9 @@ import socket, select, threading, urllib2
 
 BIND_ADDRESS = '0.0.0.0'
 STREAM_ADDRESS = '127.0.0.1'
-TIMEOUT = 5
+TIMEOUT = 30
 MSS = 1440
+UA = 'Kodi'
 
 class StreamServer():
     def __init__(self):
@@ -40,11 +41,11 @@ class StreamServer():
         #Get header
         request = urllib2.Request(url)
         request.get_method = lambda : 'HEAD'
-        response = urllib2.urlopen(request)
-
-        #Check return code
-        if response.getcode() == 200:
+        try:
+            response = urllib2.urlopen(request)
             info.append(response.info())
+        except:
+            pass
 
 
     def start(self, urls):
@@ -59,18 +60,73 @@ class StreamServer():
         sizes, content_type = self.getSizes(urls)
 
         #Start to accepting
-        threading.Thread(target = self.run, args = [server, sizes, content_type]).start()
+        threading.Thread(target = self.run, args = [server, urls, sizes, content_type]).start()
         return 'http://%s:%d' % (STREAM_ADDRESS, port)
 
-    def processHEAD(self, stream, content_type, content_length):
+    def sendHead(self, stream, content_type, content_length):
         #Send response to HEAD request
         stream.send('HTTP/1.1 200 OK\r\n'
-                   'Content-Type: %s\r\n'
-                   'Accept-Ranges: bytes\r\n'
-                   'Content-Length: %d\r\n'
-                   'Connection: close\r\n\r\n' % (content_type, content_length))
+                    'Content-Type: %s\r\n'
+                    'Accept-Ranges: bytes\r\n'
+                    'Content-Length: %d\r\n'
+                    'Connection: close\r\n\r\n' % (content_type, content_length))
 
-    def run(self, server, sizes, content_type):
+    def processGET(self, stream, header, urls, sizes, content_type, content_length):
+        start = 0
+        for line in header.split('\r\n'):
+            if line[:5].upper() == 'RANGE':
+                start = int(line.replace(' ', '').split('=')[1].split('-')[0])
+                print 'Starting bytes %d' % (start)
+                break
+
+        #Looking for staring url 
+        index = 0
+        while start >= sizes[index]:
+            start -= sizes[index]
+            index += 1
+
+        #Get host and path
+        port = 80
+        host = urls[index].split('/')[2]
+        path = '/' + '/'.join(urls[index].split('/')[3:])
+        if ':' in host:
+            host, port = host.split(':')
+            port = int(port)
+
+        #Connect to remote
+        agent = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        agent.bind(('', 0))
+        agent.settimeout(TIMEOUT)
+        agent.connect((host, port))
+
+        #Send GET request
+        agent.send('GET %s HTTP/1.1\r\n'
+                   'Range: bytes=%d-\r\n'
+                   'Host: %s\r\n'
+                   'User-Agent: %s\r\n'
+                   'Accept: */*\r\n\r\n' % (path, start, host, UA))
+
+        #Receive data from server
+        data = agent.recv(MSS)
+        if data[9:11] != '20':
+            print 'Error status %s' % (data[9:12])
+            agent.close()
+            return None, 0
+
+        #Send Response to client
+        self.sendHead(stream, content_type, content_length)
+        skip = data.index('\r\n\r\n') + 4
+        stream.send(data[skip:])
+
+        while True:
+            data = agent.recv(MSS)
+            stream.send(data)
+
+        return stream, index
+
+
+
+    def run(self, server, urls, sizes, content_type):
         #Calculate the total size
         total_size = 0
         for size in  sizes:
@@ -78,7 +134,16 @@ class StreamServer():
 
         stream = None
         agent = None
+        index = 0
         inputs = [server]
+
+        def clean_input(s):
+            if s is None:
+                return
+            if s in inputs:
+                inputs.remove(s)
+            s.close()
+            s = None
 
         while True:
             readable, _, _ = select.select(inputs, [], [], TIMEOUT)
@@ -90,13 +155,9 @@ class StreamServer():
 
             if server in  readable:
                 #New connection from client. Close previous connection. 
-                if stream in inputs:
-                    inputs.remove(stream)
-                    stream.close()
-                    stream = None
+                clean_input(stream)
+                clean_input(agent)
                 stream, _ = server.accept()
-                stream.setblocking(False)
-                print 'Accept from ', stream.getpeername()
                 inputs.append(stream)
 
             if stream in readable:
@@ -105,30 +166,38 @@ class StreamServer():
                     data = stream.recv(MSS)
                     if not data:
                         raise
-                    print 'Receive data (%d) from %s' % (len(data), stream.getpeername())
+                    print 'Receive data from client:\n%s' % (data)
                     if data[:4].upper() == 'HEAD':
-                        self.processHEAD(stream, content_type, total_size)
-                except:
-                    print 'Disconnect from ', stream.getpeername()
-                    inputs.remove(stream)
-                    stream.close()
-                    stream = None
+                        self.sendHead(stream, content_type, total_size)
+                        raise
+                    elif data[:3].upper() == 'GET':
+                        clean_input(agent)
+                        agent, index = self.processGET(stream, data, urls, sizes, content_type, total_size)
+                        if agent is None:
+                            raise
+                        inputs.append(agent)
+                except Exception, e:
+                    print(e)
+                    clean_input(stream)
 
 
 if __name__ == '__main__':
-    urls = ["http://103.192.253.24/6971F4187A5308248F216A65CB/0300010C00565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://101.226.184.77/6972329BBED3E8377C9087529A/0300010C01565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://220.189.221.181/6972711EB2E4183100805331A7/0300010C02565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://202.102.93.179/6972AFA1AB63681676E9DB30FE/0300010C03565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://61.160.205.15/6772711E750408291565783B82/0300010C04565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://222.73.61.176/6772AFA1DE04281427E1105AF4/0300010C05565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://101.226.184.25/6572711E4F54783FAC43B3295D/0300010C06565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://202.102.74.49/6572AFA16F94E8209D3BB02FB0/0300010C07565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://61.160.198.171/6572EE24EAF4982EF2158E6968/0300010C08565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://101.226.184.53/6773A9ADB814383C08D9563EF0/0300010C09565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://202.102.93.171/6773E830B184281B8CFFCB5638/0300010C0A565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts",
-            "http://59.63.171.16/677426B371E377EB9BD786CD0/0300010C0B565DD9C47EDC30059CF77519C53D-C970-A3B0-3E79-3E713E57EA3D.flv.ts"
-            ]
+    urls = [line.rstrip('\n') for line in open('urls.txt')]
     ss = StreamServer()
-    print(ss.start(urls))
+    url = ss.start(urls)
+    print(url)
     #print(ss.getSizes(urls))
+
+    port = 80
+    host = url.split('/')[2]
+    path = '/' + '/'.join(url.split('/')[3:])
+    if ':' in host:
+        host, port = host.split(':')
+        port = int(port)
+
+    c = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    c.bind(('', 0))
+    c.connect((host, port))
+    c.send('GET / HTTP/1.1\r\n'
+           'Range: bytes=0-\r\n')
+    c.close()

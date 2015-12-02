@@ -2065,11 +2065,20 @@ def play(vid, playContinue=False):
 
     urls = re.findall(r'(http://[^?]+)\?ts_start=0', result)
     if settings_data['play_type'][settings['play']] == 'list':
-        for i in range(len(urls)):
-            title =movdat['video']['title'] + u" - 第"+str(i+1)+"/"+str(len(urls)) + u"节"
+        if False:
+            for i in range(len(urls)):
+                title =movdat['video']['title'] + u" - 第"+str(i+1)+"/"+str(len(urls)) + u"节"
+                listitem=xbmcgui.ListItem(title)
+                listitem.setInfo(type="Video",infoLabels={"Title":title})
+                playlist.add(urls[i], listitem)
+        else:
+            from stream import StreamServer
+            ss = StreamServer()
+            url = ss.start(urls)
+            title =movdat['video']['title']
             listitem=xbmcgui.ListItem(title)
             listitem.setInfo(type="Video",infoLabels={"Title":title})
-            playlist.add(urls[i], listitem)
+            playlist.add(url, listitem)
     elif settings_data['play_type'][settings['play']] == 'stack':
         playurl = 'stack://' + ' , '.join(urls)
         listitem=xbmcgui.ListItem(movdat['video']['title'])
