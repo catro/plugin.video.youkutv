@@ -2006,6 +2006,7 @@ def getProperty(item, key):
 
 
 def play(vid, playContinue=False):
+    GetHttpData('http://v.youku.com/v_show/id_%s' % (vid))
     readSettings()
     playid = vid
     xbmc.executebuiltin("ActivateWindow(busydialog)")
