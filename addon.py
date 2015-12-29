@@ -3,6 +3,7 @@
 
 import xbmcgui, xbmcaddon, xbmc
 import json, sys, urllib, urllib2, gzip, StringIO, re, os, time, threading, socket, base64, math, cookielib
+from video_concatenate import video_concatenate
 try:
    import StorageServer
 except:
@@ -16,6 +17,7 @@ __resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' )
 sys.path.append (__resource__)
 cache = StorageServer.StorageServer(__addonid__, 87600)
 m3u8_file = __cwd__ + '/v.m3u8'
+vc = video_concatenate(timeout=1)
 
 #Set timeout of socket
 socket.setdefaulttimeout(10) 
@@ -43,8 +45,8 @@ settings_data = {'resolution':[u'1080P', u'超清', u'高清', u'标清', u'标�
                  'resolution_type':[['hd3','mp4hd3'], ['hd2','mp4hd2'], ['mp4','mp4hd'], ['flv','flvhd'], ['3gphd']], 
                  'language':[u'默认', u'国语', u'粤语', u'英语'], 
                  'language_code':[u'', u'guoyu', u'yueyu', u'yingyu'], 
-                 'play':['分段', '堆叠'],
-                 'play_type':['list', 'stack']}
+                 'play':['分段', '堆叠', '整合(试验阶段)'],
+                 'play_type':['list', 'stack', 'concatenate']}
 settings={'resolution':0, 'language':0, 'play':0}
 resolution_map = {'3gphd':  '3gp',
                   'flv':    'flv',
@@ -153,9 +155,11 @@ class MyPlayer(xbmc.Player):
         except:
             pass
         xbmc.Player.onPlayBackEnded(self)
+        vc.stop()
 
     def onPlayBackStopped(self):
         cache.set(self.vid, repr({'offset':self.last, 'startpos':self.lastpos}))
+        vc.stop()
 
 
     def updateHistory(self, check=True, base=-1):
@@ -2119,6 +2123,13 @@ def play(vid, playContinue=False):
         playlist = xbmc.PlayList(1)
         playlist.clear()
 
+        if settings_data['play_type'][settings['play']] == 'concatenate' and resolution_map[resolution] == 'flv':
+            vc.start(urls)
+            port = vc.get_port()
+            assert(port != 0)
+            listitem=xbmcgui.ListItem(movdat['video']['title'])
+            listitem.setInfo(type="Video", infoLabels={"Title":movdat['video']['title']})
+            playlist.add('http://127.0.0.1:%d' % port, listitem)
         if settings_data['play_type'][settings['play']] == 'list':
             for i in range(len(urls)):
                 title =movdat['video']['title'] + u" - 第"+str(i+1)+"/"+str(len(urls)) + u"节"
@@ -2142,6 +2153,7 @@ def play(vid, playContinue=False):
         ret = eval(cache.get('history'))
     except:
         ret = {}
+
 
     if ret.has_key(vid):
         history = ret[vid] 
