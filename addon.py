@@ -17,7 +17,7 @@ __resource__   = xbmc.translatePath( os.path.join( __cwd__, 'resources', 'lib' )
 sys.path.append (__resource__)
 cache = StorageServer.StorageServer(__addonid__, 87600)
 m3u8_file = __cwd__ + '/v.m3u8'
-vc = video_concatenate(timeout=1)
+vc = video_concatenate()
 
 #Set timeout of socket
 socket.setdefaulttimeout(10) 
@@ -2129,7 +2129,7 @@ def play(vid, playContinue=False):
             listitem=xbmcgui.ListItem(movdat['video']['title'])
             listitem.setInfo(type="Video", infoLabels={"Title":movdat['video']['title']})
             playlist.add('http://127.0.0.1:%d' % port, listitem)
-        if settings_data['play_type'][settings['play']] == 'list':
+        elif settings_data['play_type'][settings['play']] == 'list':
             for i in range(len(urls)):
                 title =movdat['video']['title'] + u" - 第"+str(i+1)+"/"+str(len(urls)) + u"节"
                 listitem=xbmcgui.ListItem(title)
@@ -2171,7 +2171,8 @@ def play(vid, playContinue=False):
         pass
 
     if (offset or startpos) and playContinue == False:
-        choice = openWindow('confirm')
+        #choice = openWindow('confirm')
+        choice = 2
         if choice == 1:
             try:
                 cache.delete(vid)

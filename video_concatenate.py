@@ -5,47 +5,115 @@ import socket, select, threading, urllib2, time, struct
 
 class flv:
     @staticmethod
-    def modify_duration(data, duration):
-        i = data.find('duration')
-        if i == -1 or i + 17 > len(data):
-            return False, data
-        else:
-            return True, data[:i + 9] + struct.pack('>d', duration) + data[i + 17:]
+    def generate_header(original_header, durations, positions, times):
+        header = ''
+        offset_script_len = 14
+        offset_durations = original_header.find('duration')
+        offset_positions = original_header.find('filepositions')
+        offset_count = offset_positions + 14
+        offset_prev_len = len(original_header) - 4
+
+        s1, s2, s3 = struct.unpack('BBB', original_header[offset_script_len: offset_script_len + 3])
+        script_len = (s1 << 16) | (s2 << 8) | s3
+
+        #Adjust positions and times
+        total_duration = 0
+        for i in range(len(durations)):
+            total_duration += durations[i]
+
+        #Calculate the size of new header
+        count = struct.unpack('>I', original_header[offset_count: offset_count + 4])[0]
+        offset_times_end = offset_positions + 30 + 2 * 9 * count 
+        script_len += 2 * 9 * (len(positions) - count)     #Each position and time takes 9 bytes
+        count = len(positions)
+
+        #Data before script len
+        header = original_header[:offset_script_len]
+
+        #New script len
+        s1 = (script_len >> 16) & 0xFF
+        s2 = (script_len >> 8) & 0xFF
+        s3 = script_len & 0xFF
+        header += struct.pack('BBB', s1, s2, s3)
+
+        #Data before duration
+        header += original_header[offset_script_len + 3: offset_durations + 9]
+
+        #New duration
+        header += struct.pack('>d', total_duration)
+
+        #Data before filepositions
+        header += original_header[offset_durations + 17: offset_positions]
+        
+        #New filepositions
+        header += 'filepositions'
+        header += struct.pack('B', 0x0A)
+        header += struct.pack('>I', count)
+        for p in positions:
+            header += struct.pack('B', 0x00)
+            header += struct.pack('>d', p)
+        header += struct.pack('BB', 0x00, 0x05)
+        
+        #New times
+        header += 'times'
+        header += struct.pack('B', 0x0A)
+        header += struct.pack('>I', count)
+        for t in times:
+            header += struct.pack('B', 0x00)
+            header += struct.pack('>d', t)
+
+        header += original_header[offset_times_end: offset_prev_len]
+
+        #Previous TAG len
+        script_len += 11
+        header += struct.pack('>I', script_len)
+
+        return header
 
 
     @staticmethod
-    def skip_meta(data):
-        offset = data.find('FLV')
-        if offset == -1:
-            return False, data
+    def find_index(data):
+        positions = []
+        times = []
+        offset = data.find('filepositions')
+        assert(offset != -1)
 
-        offset += 13
-        while offset + 15 < len(data):
-            t, s1, s2, s3 = struct.unpack('BBBB', data[offset: offset + 4])
-            size = (s1 << 16) | (s2 << 8) | s3
-            
-            if offset + 15 + size > len(data):
-                return False, data
+        pos_count = struct.unpack('>I', data[offset + 14: offset + 18])[0]
+        offset += 18
+        assert(offset + pos_count * 9 <= len(data))
 
-            if t != 0x12:
-                return True, data[offset:]
+        for i in range(pos_count):
+            positions.append(struct.unpack('>d', data[offset + 1: offset + 9])[0])
+            offset += 9
 
-            offset += 15 + size
+        offset = data.find('times' + '0A'.decode('hex'))
+        assert(offset != -1)
 
-        return False, data
+        times_count = struct.unpack('>I', data[offset + 6: offset + 10])[0]
+        assert(times_count == pos_count)
+
+        offset += 10
+        assert(offset + times_count * 9 <= len(data))
+
+        for i in range(times_count):
+            times.append(struct.unpack('>d', data[offset + 1: offset + 9])[0])
+            offset += 9
+
+        return positions, times
+
 
     @staticmethod
     def find_info(data):
         i = data.find('duration')
         if i == -1 or i + 17 > len(data):
-            return False, 0, 0
+            return False, [], 0, [], []
         else:
             duration = struct.unpack('>d', data[i + 9: i + 17])[0]
 
         start = data.find('FLV')
         offset = start
         if offset == -1:
-            return False, 0, 0
+            return False, [], 0, [], []
 
         offset += 13
         while offset + 15 < len(data):
@@ -53,14 +121,16 @@ class flv:
             size = (s1 << 16) | (s2 << 8) | s3
             
             if offset + 15 + size > len(data):
-                return False, 0, 0
+                return False, [], 0, [], []
 
             if t != 0x12:
-                return True, duration, offset - start
+                positions, times = flv.find_index(data)
+                return True, data[start: offset], duration, positions, times
 
             offset += 15 + size
 
-        return False, 0, 0
+        return False, [], 0, [], []
+
 
     @staticmethod
     def modify_timestamp(data, starting_timestamp):
@@ -68,8 +138,12 @@ class flv:
         ready_data = ''
 
         while offset + 11 < len(data):
-            _, s1, s2, s3, t1, t2, t3, t4 = struct.unpack('BBBBBBBB', data[offset: offset + 8])
+            t, s1, s2, s3, t1, t2, t3, t4 = struct.unpack('BBBBBBBB', data[offset: offset + 8])
             size = (s1 << 16) | (s2 << 8) | s3
+
+            if t != 8 and t != 9 and t != 0x12:
+                #Data incorrect
+                return data
             
             if offset + 15 + size > len(data):
                 return ready_data
@@ -94,7 +168,7 @@ class video_concatenate:
     def __init__(self, 
                  bind_address = ('0.0.0.0', 0),
                  user_agent = 'video_concatenate',
-                 timeout = 10,
+                 exit_timeout = 1,
                  mss = 1460,
                  debug = True,
                 ):
@@ -110,7 +184,7 @@ class video_concatenate:
 
         self.config = {'la': bind_address,
                        'ua': user_agent,
-                       'timeout': timeout,
+                       'timeout': exit_timeout,
                        'mss': mss,
                        'debug': debug,
                       }
@@ -147,12 +221,11 @@ class video_concatenate:
         self.stop()
 
 
-    def _get_info(self, urls):
+    def _get_info(self, urls, timeout):
         infos = []
         threads = []
 
         def __get_info(url, info):
-            timeout = self.config['timeout']
             s = self._connect_to_url(url)
             data = ''
             inputs = []
@@ -181,6 +254,7 @@ class video_concatenate:
                         tmp = ''
 
                     if len(tmp) == 0:
+                        self.log('get info error due to server close the socket.')
                         break
 
                     data += tmp
@@ -189,27 +263,41 @@ class video_concatenate:
                             continue
                         i = data.upper().find('CONTENT-LENGTH')
                         if i == -1:
+                            self.log('get info error due to no content-length')
                             break
                         length = int(data[i:].split('\r\n')[0].replace(' ', '').split(':')[1])
 
                         i = data.upper().find('CONTENT-TYPE')
                         if i == -1:
+                            self.log('get info error due to no content-type')
                             break
                         t = data[i:].split('\r\n')[0].replace(' ', '').split(':')[1]
 
-                    ret, duration, offset = flv.find_info(data)
+                    ret, header, duration, positions, times = flv.find_info(data)
                     if ret == False:
                         continue
 
-                    info.append({'url': url,
-                                 'size': length,
-                                 'content-type': t,
-                                 'duration': duration,
-                                 'offset': offset})
+                    info.append(length)
+                    info.append(t)
+                    info.append(header)
+                    info.append(duration)
+                    info.append(positions)
+                    info.append(times)
+
+                    self.log('Length: %d' % (length))
+                    self.log('Meta: %d' % (len(header)))
+                    self.log('Pos Count: %d' % (len(positions)))
+                    output = ''
+                    for i in range(len(positions)):
+                        output += '{%f, %d}, ' % (times[i], int(positions[i]))
+                    self.log(output)
                     break
 
             s.close()
             return
+
+        if len(urls) == 0:
+            return 0, [], 0, 0, 0, 0, 0
 
         #Get info concurrently. 
         for url in  urls:
@@ -221,26 +309,77 @@ class video_concatenate:
         for t in threads:
             t.join()
 
-        if len(infos) == 0:
-            return [], ''
-
         videos = []
+        total_size = 0
+        total_seconds = 0
+        durations = []
+        positions = []
+        times = []
+
+        increased = 0
+        for i in range(1, len(infos)):
+            if len(infos[i]) == 0:
+                return 0, [], 0, 0, 0, 0, 0
+            increased += len(infos[i][4])
+        increased = increased * 2 * 9
+        self.log('Increased: %d' % (increased))
+
+        #Process all infomations
         for i in range(len(infos)):
             if len(infos[i]) == 0:
-                return []
-            videos.append(infos[i][0])
+                return 0, [], 0, 0, 0, 0, 0
 
-        return videos
+            info = infos[i]
+            length = info[0]
+            
+            if i != 0:
+                length -= len(info[2])
+                for j in range(len(info[4])):
+                    positions.append(info[4][j] + total_size - len(info[2]))
+                    times.append(info[5][j] + total_seconds)
+            else:
+                length += increased
+                for j in range(len(info[4])):
+                    positions.append(info[4][j] + increased)
+                    times.append(info[5][j] + total_seconds)
+
+            videos.append({'url': urls[i],
+                           'size': length,
+                           'content-type': info[1],
+                           'header_offset': len(info[2]),
+                           'duration': info[3],
+                           'starting_bytes': total_size,
+                           'starting_ms': int(total_seconds * 1000)})
+
+
+            durations.append(info[3])
+
+            total_size += length
+            total_seconds += info[3]
+
+        output = ''
+        for i in range(len(positions)):
+            output += '{%f, %d}, ' % (times[i], int(positions[i]))
+        self.log(output)
+
+        header = flv.generate_header(infos[0][2], durations, positions, times)
+        self.log('Total length: %d' % (total_size))
+
+        return increased, videos, header, total_size, total_seconds, positions, times
 
 
     def _send_head(self, starting_bytes, content_type):
         #Send response to HEAD request
-        self.agent_server.send('HTTP/1.1 200 OK\r\n'
+        self.agent_server.send('HTTP/1.1 206 Partial Content\r\n'
                                'Content-Type: %s\r\n'
                                'Accept-Ranges: bytes\r\n'
                                'Content-Length: %d\r\n'
+                               'Content-Range: bytes %d-%d/%d\r\n'
                                'Connection: close\r\n\r\n' % (content_type, 
-                                                              self.total_size - starting_bytes))
+                                                              self.total_size - starting_bytes,
+                                                              starting_bytes,
+                                                              self.total_size - 1,
+                                                              self.total_size))
 
 
     def _send_get(self, s, starting_bytes, url):
@@ -260,10 +399,22 @@ class video_concatenate:
 
     def _find_starting(self, data):
         start = 0
+        skip_bytes = 0
+        i = 1
         for line in data.split('\r\n'):
             if line[:5].upper() == 'RANGE':
                 start = int(line.replace(' ', '').split('=')[1].split('-')[0])
                 break
+        self.log('requested starting bytes: %d' % (start))
+
+        #Adjust the starting bytes to keyframe
+        if start != 0:
+            for i in range(1, len(self.positions)):
+                if start < self.positions[i]:
+                    break
+            skip_bytes = int(start - self.positions[i - 1])
+            start = self.positions[i - 1]
+        self.log('starting timestamp: %f' % (self.times[i - 1]))
 
         relative = start
         index = 0
@@ -274,10 +425,15 @@ class video_concatenate:
                 relative -= self.videos[i]['size'] 
                 index += 1
 
+        if relative == start and start != 0:
+            start -= self.increased
+            relative -= self.increased
+
         self.log('starting bytes: %d' % (start))
         self.log('relative starting bytes: %d' % (relative))
+        self.log('need to skip bytes: %d' % (skip_bytes))
 
-        return start, relative, index
+        return start, relative, index, skip_bytes
 
 
     def _connect_to_url(self, url):
@@ -313,7 +469,7 @@ class video_concatenate:
         skip_header = True
         skip_meta = True
         modify_timestamp = True
-        modify_duration = True
+        remaining_bytes = 0
 
         def _clean_socket(s):
             if s is None:
@@ -343,7 +499,7 @@ class video_concatenate:
                 self.log('Stopped')
                 break
 
-            if not readable and not writable and len(inputs) == 1 and len(outputs) == 0:
+            if not readable and not writable and self.agent_server == None and self.agent_client == None:
                 #Timeouts
                 self.log('select timeout')
                 break
@@ -398,11 +554,11 @@ class video_concatenate:
                             url = self.videos[index]['url']
                             self.agent_client = self._connect_to_url(url)
                             outputs.append(self.agent_client)
-                            relative_starting_bytes = 0
-                            modify_duration = False
-                            skip_meta = True
+                            relative_starting_bytes = self.videos[index]['header_offset']
+                            skip_meta = False
                             modify_timestamp = True
                             skip_header = True
+                            skip_bytes = 0
                         continue
 
                     recv_buffer += tmp
@@ -420,23 +576,24 @@ class video_concatenate:
                             recv_buffer = recv_buffer[i + 4:]
                             skip_header = False
 
-                    #Modify duration
-                    if ready == True and modify_duration == True:
-                        ready, recv_buffer = flv.modify_duration(recv_buffer, self.total_seconds)
-                        if ready:
-                            self.log('duration modified')
-                            modify_duration = False
-                        else:
-                            self.log('duration not found')
-
                     #Skip meta data
                     if ready == True and skip_meta == True:
-                        ready, recv_buffer = flv.skip_meta(recv_buffer)
-                        if ready:
-                            self.log('meta skipped')
-                            skip_meta = False
+                        if len(recv_buffer) < self.videos[index]['header_offset']:
+                            ready = False
+                            self.log('meta not complete (%d < %d)' % (len(recv_buffer), self.videos[index]['header_offset']))
                         else:
-                            self.log('meta not complete')
+                            self.log('meta skipped')
+                            recv_buffer = recv_buffer[self.videos[index]['header_offset']:]
+                            skip_meta = False
+
+                    if ready == True and skip_bytes > 0:
+                        if len(recv_buffer) > skip_bytes:
+                            recv_buffer = recv_buffer[skip_bytes:]
+                            skip_bytes = 0
+                        else:
+                            skip_bytes -= len(recv_buffer)
+                            recv_buffer = ''
+                            ready = False
 
                     if ready == True and modify_timestamp == True:
                         ready_data = flv.modify_timestamp(recv_buffer, self.videos[index]['starting_ms'])
@@ -456,6 +613,24 @@ class video_concatenate:
 
                     if self.agent_server not in outputs:
                         outputs.append(self.agent_server)
+
+                    remaining_bytes -= len(ready_data)
+
+                    if remaining_bytes == 0:
+                        _clean_socket(self.agent_client)
+                        self.agent_client = None
+                        if index + 1 < len(self.videos):
+                            index += 1
+                            self.log('switch to vedio %d' % (index))
+                            self.log('starting timestamp: %f' % (self.videos[index]['starting_ms']))
+                            url = self.videos[index]['url']
+                            self.agent_client = self._connect_to_url(url)
+                            outputs.append(self.agent_client)
+                            relative_starting_bytes = self.videos[index]['header_offset']
+                            skip_meta = False
+                            modify_timestamp = True
+                            skip_header = True
+                            skip_bytes = 0
 
                     continue
 
@@ -480,27 +655,30 @@ class video_concatenate:
                         #Header not complete
                         continue
 
-                    starting_bytes, relative_starting_bytes, index = self._find_starting(header)
-                    self.log('starting timestamp: %f' % (self.videos[index]['starting_ms']))
+                    starting_bytes, relative_starting_bytes, index, skip_bytes = self._find_starting(header)
 
                     if starting_bytes < self.total_size:
                         if header[:3].upper() == 'GET':
                             self.log('receive GET request')
+                            self._send_head(starting_bytes, self.videos[index]['content-type'])
                             url = self.videos[index]['url']
                             _clean_socket(self.agent_client)
                             self.agent_client = self._connect_to_url(url)
                             outputs.append(self.agent_client)
 
-                            if starting_bytes == 0:
-                                modify_duration = True
-                                skip_meta = False
+                            if index == 0:
                                 modify_timestamp = False
-                            elif relative_starting_bytes == 0:
-                                modify_duration = False
-                                skip_meta = True
+                                if starting_bytes == 0:
+                                    self.agent_server.send(self.header)
+                                    skip_meta = True
+                                else:
+                                    skip_meta = False
+                            else:
                                 modify_timestamp = True
+                                skip_meta = False
+                                relative_starting_bytes += self.videos[index]['header_offset']
+
                             skip_header = True
-                            self._send_head(starting_bytes, self.videos[index]['content-type'])
                             header = ''
                             continue
 
@@ -530,6 +708,9 @@ class video_concatenate:
                 if s == self.agent_client:
                     #Send GET request
                     self._send_get(self.agent_client, relative_starting_bytes, url)
+                    remaining_bytes = self.videos[index]['size'] - relative_starting_bytes
+                    if index == 0:
+                        remaining_bytes -= self.increased
                     outputs.remove(self.agent_client)
                     if self.agent_client not in inputs:
                         inputs.append(self.agent_client)
@@ -578,12 +759,13 @@ class video_concatenate:
 
 
     #Start agent thread
-    def start(self, urls):
+    def start(self, urls, get_timeout = 30):
         self.stop()
         self.running = True
 
         #Create server socket
         self.server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
         self.server.bind(self.config['la'])
         self.server.listen(5)
         self.server.setblocking(False)
@@ -592,28 +774,13 @@ class video_concatenate:
         self.log('server listen at %s:%d' % (address, port))
 
         #Get size and content type
-        videos = self._get_info(urls)
+        self.increased, self.videos, self.header, self.total_size, self.total_seconds, self.positions, self.times = self._get_info(urls, get_timeout)
 
-        if len(videos) == 0 or len(videos) != len(urls):
+        if len(self.videos) == 0 or len(self.videos) != len(urls):
             self.log('Failed to process urls.')
             raise
 
-        #Construct videos
-        total_size = 0
-        total_seconds = 0
-        for i in range(len(videos)):
-            if i != 0:
-                videos[i]['size'] -= videos[i]['offset']
-            videos[i]['starting_bytes'] = total_size
-            videos[i]['starting_ms'] = int(total_seconds * 1000)
-            total_size += videos[i]['size']
-            total_seconds += videos[i]['duration']
-            self.log(videos[i])
-
         #Set video variables
-        self.total_size = total_size 
-        self.total_seconds = total_seconds
-        self.videos = videos
 
         #Start thread.
         self.thread = threading.Thread(target = self._run)
@@ -635,7 +802,8 @@ class video_concatenate:
 
 if __name__ == '__main__':
     urls = [line.rstrip('\n') for line in open('urls.txt')]
-    vc = video_concatenate(('0.0.0.0', 7777))
+    urls = urls[0:30]
+    vc = video_concatenate(('0.0.0.0', 7777), exit_timeout = 10)
     vc.start(urls)
     #vc.stop()
 
