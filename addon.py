@@ -45,8 +45,8 @@ settings_data = {'resolution':[u'1080P', u'超清', u'高清', u'标清', u'标�
                  'resolution_type':[['hd3','mp4hd3'], ['hd2','mp4hd2'], ['mp4','mp4hd'], ['flv','flvhd'], ['3gphd']], 
                  'language':[u'默认', u'国语', u'粤语', u'英语'], 
                  'language_code':[u'', u'guoyu', u'yueyu', u'yingyu'], 
-                 'play':['分段', '堆叠', '整合(试验阶段)'],
-                 'play_type':['list', 'stack', 'concatenate']}
+                 'play':['整合(试验阶段)', '分段', '堆叠'],
+                 'play_type':['concatenate', 'list', 'stack']}
 settings={'resolution':0, 'language':0, 'play':0}
 resolution_map = {'3gphd':  '3gp',
                   'flv':    'flv',
@@ -2012,6 +2012,35 @@ def getProperty(item, key):
 def play(vid, playContinue=False):
     readSettings()
     playid = vid
+
+    try:
+        ret = eval(cache.get('history'))
+    except:
+        ret = {}
+
+    if ret.has_key(vid):
+        history = ret[vid] 
+    else:
+        history = {}
+    offset = 0
+    startpos = 0
+    try:
+        resume = eval(cache.get(vid))
+        offset = resume['offset']
+        startpos = resume['startpos']
+    except:
+        pass
+
+    if (offset or startpos) and playContinue == False:
+        choice = openWindow('confirm')
+        if choice == 1:
+            try:
+                cache.delete(vid)
+            except:
+                pass
+        elif choice == -1:
+            return
+
     xbmc.executebuiltin("ActivateWindow(busydialog)")
     try:
         movinfo = json.loads(GetHttpData('http://play.youku.com/play/get.json?vid=%s&ct=12' % playid).replace('\r\n',''))
@@ -2148,38 +2177,10 @@ def play(vid, playContinue=False):
 
 
     xbmc.executebuiltin( "Dialog.Close(busydialog)" )
-    try:
-        ret = eval(cache.get('history'))
-    except:
-        ret = {}
 
-
-    if ret.has_key(vid):
-        history = ret[vid] 
-    else:
-        history = {}
     history['title'] = movdat['video']['title']
     history['vid'] = vid
     history['logo'] = movdat['video']['logo']
-    offset = 0
-    startpos = 0
-    try:
-        resume = eval(cache.get(vid))
-        offset = resume['offset']
-        startpos = resume['startpos']
-    except:
-        pass
-
-    if (offset or startpos) and playContinue == False:
-        #choice = openWindow('confirm')
-        choice = 2
-        if choice == 1:
-            try:
-                cache.delete(vid)
-            except:
-                pass
-        elif choice == -1:
-            return
 
     cache.set('currentVID', vid)
     if True:

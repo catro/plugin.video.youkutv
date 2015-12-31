@@ -356,6 +356,7 @@ class video_concatenate:
 
             total_size += length
             total_seconds += info[3]
+            self.log(videos[-1])
 
         output = ''
         for i in range(len(positions)):
@@ -368,18 +369,20 @@ class video_concatenate:
         return increased, videos, header, total_size, total_seconds, positions, times
 
 
-    def _send_head(self, starting_bytes, content_type):
-        #Send response to HEAD request
-        self.agent_server.send('HTTP/1.1 206 Partial Content\r\n'
-                               'Content-Type: %s\r\n'
-                               'Accept-Ranges: bytes\r\n'
-                               'Content-Length: %d\r\n'
-                               'Content-Range: bytes %d-%d/%d\r\n'
-                               'Connection: close\r\n\r\n' % (content_type, 
-                                                              self.total_size - starting_bytes,
-                                                              starting_bytes,
-                                                              self.total_size - 1,
-                                                              self.total_size))
+    def _resp_head(self, starting_bytes, content_type):
+        self.log('responde starting bytes: %d' % (starting_bytes))
+        header = 'HTTP/1.1 206 Partial Content\r\n' \
+                 'Content-Type: %s\r\n'             \
+                 'Accept-Ranges: bytes\r\n'         \
+                 'Content-Length: %d\r\n'           \
+                 'Content-Range: bytes %d-%d/%d\r\n'\
+                 'Connection: close\r\n\r\n' % (content_type, 
+                                                self.total_size - starting_bytes,
+                                                starting_bytes,
+                                                self.total_size - 1,
+                                                self.total_size)
+
+        return header
 
 
     def _send_get(self, s, starting_bytes, url):
@@ -398,42 +401,43 @@ class video_concatenate:
 
 
     def _find_starting(self, data):
-        start = 0
+        requested_start = 0
         skip_bytes = 0
         i = 1
         for line in data.split('\r\n'):
             if line[:5].upper() == 'RANGE':
-                start = int(line.replace(' ', '').split('=')[1].split('-')[0])
+                requested_start = int(line.replace(' ', '').split('=')[1].split('-')[0])
                 break
-        self.log('requested starting bytes: %d' % (start))
+        self.log('')
+        self.log('requested starting bytes: %d' % (requested_start))
 
         #Adjust the starting bytes to keyframe
-        if start != 0:
+        keyframe_start = requested_start
+        if keyframe_start != 0:
             for i in range(1, len(self.positions)):
-                if start < self.positions[i]:
+                if requested_start < self.positions[i]:
                     break
-            skip_bytes = int(start - self.positions[i - 1])
-            start = self.positions[i - 1]
-        self.log('starting timestamp: %f' % (self.times[i - 1]))
+            keyframe_start = self.positions[i - 1]
+            self.log('keyframe starting bytes: %d' % (self.positions[i - 1]))
+            self.log('keyframe starting timestamp: %f' % (self.times[i - 1]))
 
-        relative = start
         index = 0
-        for i in range(len(self.videos)):
-            if relative < self.videos[i]['size']:
+        while index < len(self.videos) - 1:
+            if requested_start < self.videos[index + 1]['starting_bytes']:
                 break
-            else:
-                relative -= self.videos[i]['size'] 
-                index += 1
+            index += 1
+        relative_start = requested_start - self.videos[index]['starting_bytes']
+        self.log('video index: %d' % (index))
 
-        if relative == start and start != 0:
-            start -= self.increased
-            relative -= self.increased
+        if index == 0:
+            if relative_start != 0:
+                relative_start -= self.increased
+        else:
+            relative_start += self.videos[index]['header_offset']
+        self.log('relative starting bytes: %d' % (relative_start))
+        self.log('')
 
-        self.log('starting bytes: %d' % (start))
-        self.log('relative starting bytes: %d' % (relative))
-        self.log('need to skip bytes: %d' % (skip_bytes))
-
-        return start, relative, index, skip_bytes
+        return requested_start, relative_start, index, int(requested_start - keyframe_start)
 
 
     def _connect_to_url(self, url):
@@ -659,32 +663,29 @@ class video_concatenate:
 
                     if starting_bytes < self.total_size:
                         if header[:3].upper() == 'GET':
-                            self.log('receive GET request')
-                            self._send_head(starting_bytes, self.videos[index]['content-type'])
+                            send_buffer = self._resp_head(starting_bytes, self.videos[index]['content-type'])
                             url = self.videos[index]['url']
                             _clean_socket(self.agent_client)
                             self.agent_client = self._connect_to_url(url)
                             outputs.append(self.agent_client)
 
+                            if starting_bytes == 0:
+                                send_buffer += self.header
+                                skip_meta = True
+                            else:
+                                skip_meta = False
+
                             if index == 0:
                                 modify_timestamp = False
-                                if starting_bytes == 0:
-                                    self.agent_server.send(self.header)
-                                    skip_meta = True
-                                else:
-                                    skip_meta = False
                             else:
                                 modify_timestamp = True
-                                skip_meta = False
-                                relative_starting_bytes += self.videos[index]['header_offset']
 
                             skip_header = True
                             header = ''
                             continue
 
                         if header[:4].upper() == 'HEAD':
-                            self.log('receive HEAD request')
-                            self._send_head(starting_bytes, self.videos[index]['content-type'])
+                            self.agent_server.send(self._resp_head(starting_bytes, self.videos[index]['content-type']))
 
                     header = ''
                     _clean_socket(self.agent_server)
@@ -802,7 +803,7 @@ class video_concatenate:
 
 if __name__ == '__main__':
     urls = [line.rstrip('\n') for line in open('urls.txt')]
-    urls = urls[0:30]
+    urls = urls[0:]
     vc = video_concatenate(('0.0.0.0', 7777), exit_timeout = 10)
     vc.start(urls)
     #vc.stop()
