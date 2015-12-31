@@ -2010,7 +2010,6 @@ def getProperty(item, key):
 
 
 def play(vid, playContinue=False):
-    GetHttpData('http://v.youku.com/v_show/id_%s' % (vid))
     readSettings()
     playid = vid
     xbmc.executebuiltin("ActivateWindow(busydialog)")
@@ -2318,5 +2317,6 @@ except:
     if __name__ == '__main__':
         cj = cookielib.CookieJar()
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        opener.addheaders = [('Cookie','r=WTF')]
         urllib2.install_opener(opener)
         openWindow('main')
