@@ -44,7 +44,7 @@ mainData = [{'title': '搜索', 'image': 'yk_search.jpg', 'mtype': 'search'},
 settings_data = {'resolution':[u'1080P', u'超清', u'高清', u'标清', u'标清(3GP)'],
                  'resolution_type':[['hd3','mp4hd3'], ['hd2','mp4hd2'], ['mp4','mp4hd'], ['flv','flvhd'], ['3gphd']],
                  'language':[u'默认', u'国语', u'粤语', u'英语'],
-                 'language_code':[u'', u'guoyu', u'yueyu', u'yingyu'],
+                 'language_code':[u'', u'guoyu', u'yue', u'yingyu'],
                  'play':['整合(试验阶段)', '分段', '堆叠'],
                  'play_type':['concatenate', 'list', 'stack']}
 settings={'resolution':0, 'language':0, 'play':0}
@@ -2062,7 +2062,7 @@ def play(vid, playContinue=False):
         for i in range(settings['resolution'], len(settings_data['resolution'])):
             for t in settings_data['resolution_type'][i]:
                 for s in movdat1['stream']:
-                    if settings['language'] == 0 or language_code == s['audio_lang']:
+                    if settings['language'] == 0 or language_code == s['audio_lang'] or s['audio_lang'] == 'default':
                         if t == s['stream_type']:
                             stream = s
                             resolution = settings_data['resolution_type'][i][0]
